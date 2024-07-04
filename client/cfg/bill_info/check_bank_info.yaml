@@ -1,0 +1,126 @@
+check_all_number:
+  "101010": [payer_number_value]
+  "101020": [payer_number_value]
+  "101030": [payer_number_value]
+  "101050": [serial_number_value]
+  "101060": [payer_number_value]
+  "102010": [payer_number_value]
+  # "103010": [serial_number_value]
+  "103020": [payer_number_value]
+  "103030": [serial_number_value, payer_number_value]
+  "104010": [serial_number_value, payer_number_value]
+  "104020": [serial_number_value, payer_number_value]
+  "104030": [serial_number_value]
+  "105010": [serial_number_value, payer_number_value]
+  "105020": [serial_number_value]
+  "106010": [payer_number_value]
+  "106020": [payer_number_value]
+  "106030": [payer_number_value]
+  "106040": [payer_number_value]
+  "107010": [payer_number_value]
+  "107020": [payer_number_value]
+  "109010": [payer_number_value]
+  "109020": [payer_number_value]
+  "111010": [payer_number_value]
+  "113010": [serial_number_value]
+  "113020": [serial_number_value]
+  "113030": [serial_number_value]
+  "114010": [beneficiary_number_value, payer_number_value, serial_number_value]
+  "114020": [beneficiary_number_value, payer_number_value, serial_number_value]
+  "115010": [serial_number_value]
+  "117010": [payer_number_value]
+  "119010": [payer_number_value]
+  "119030": [payer_number_value]
+  "129010": [payer_number_value]
+  "134010": [payer_number_value]
+  "139010": [serial_number_value]
+  "144030": [serial_number_value]
+  "145010": [serial_number_value]
+  "150010": [payer_number_value]
+  "157010": [payer_number_value]
+  "158010": [payer_number_value]
+  "161010": [serial_number_value]
+  "164010": [payer_number_value, payer_number_value]
+  "177010": [payer_number_value]
+  "184010": [payer_number_value]
+  "185010": [payer_number_value]
+  "190010": [payer_number_value]
+  "190020": [payer_number_value]
+  "191020": [serial_number_value]
+  "195020": [payer_number_value]
+  "201010": [payer_number_value]
+  "216010": [payer_number_value]
+  "225020": [payer_number_value]
+  "236010": [serial_number_value]
+  "236040": [serial_number_value]
+  "243010": [serial_number_value]
+  "243020": [serial_number_value]
+  "243040": [serial_number_value]
+  "243050": [serial_number_value]
+  "264010": [serial_number_value]
+  "274010": [payer_number_value]
+
+len_value_all_bank:
+  serial_number_value: 5
+  # payer_number_value: 6
+
+len_value:
+  "105020":
+    serial_number_value: 15
+  "106010":
+    serial_number_value: 7
+  "110010":
+    serial_number_value: 22
+  "114020":
+    serial_number_value: 10
+  "139010":
+    serial_number_value: 20
+  "157030":
+    serial_number_value: 33
+  "161010":
+    serial_number_value: 22
+  "176010":
+    serial_number_value: 11
+  "180010":
+    serial_number_value: 20
+  "198010":
+    serial_number_value: 20
+  "203030":
+    serial_number_value: 8
+  "243010":
+    serial_number_value: 25
+  "243020":
+    serial_number_value: 22
+  "274010":
+    serial_number_value: 15
+  "282010":
+    serial_number_value: 15
+
+character_rm_all_bank:
+  phone_time: [号, "@", 支, C, D, Q, "?", "a", "L"]
+  payer_name_value: [":", ：]
+  beneficiary_name_value: [":", ：]
+  beneficiary_number_value: [_, ▁, ：, ":", ",", ，, （, ）, (, ), ">"]
+  payer_number_value: [_, ▁, ：, ":", ",", ，, （, ）, (, ), ">"]
+  transfer_money: [金额：, ":", ：]
+  serial_number_value: ["|"]
+
+character_rm:
+  "101010":
+    transfer_time_value: ["A"]
+  "106010":
+    payer_name_value: ["向您转账", "向您"]
+  "114010":
+    transfer_time_value: ["发银行", "表", "用", "意", "纯", "辣"]
+  "118010":
+    others_serial_number_value: ["专用章"]
+  "182010":
+    serial_number_value: ["K"]
+  "243020":
+    payer_bank_value: ["("]
+# split_letter_number:
+#   "103020": [beneficiary_account_name_value, beneficiary_account_number_value]
+#   "103060": [beneficiary_account_name_value, beneficiary_account_number_value]
+#   "243020": [payer_bank_value, payer_account_number_value]
+#   "243030": [payer_bank_value, payer_account_number_value]
+# "243050": [payer_bank_value, payer_account_number_value]

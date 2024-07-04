@@ -1,0 +1,13 @@
+none
+beneficiary_name_value
+beneficiary_number_value
+beneficiary_bank_value
+payer_name_value
+payer_number_value
+payer_bank_value
+transfer_money
+transfer_money_text_value
+account_balance
+transfer_time_value
+serial_number_value
+others_serial_number_value

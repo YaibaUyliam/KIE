@@ -1,0 +1,16 @@
+test:
+  KIE_db:
+    connection_string: mongodb://172.19.16.45:27017
+    host: 172.19.16.45
+    port: 27017
+    # username: root
+    # password: Ducky@123
+    maxPoolSize: 0
+    database: test-db
+    table: bill_v2
+
+  OrderDB:
+    connection_string: mongodb://admin:92F767B6302F76A799A75447006AA59A@16.163.245.213:27017
+
+  ModelResultDB:
+    connection_string: mongodb://admin:92F767B6302F76A799A75447006AA59A@16.163.245.213:27017
