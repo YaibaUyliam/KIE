@@ -7,7 +7,7 @@ test:
     # password: Ducky@123
     maxPoolSize: 0
     database: test-db
-    table: bill_v2
+    table: bill_v3
 
   OrderDB:
     connection_string: mongodb://admin:92F767B6302F76A799A75447006AA59A@16.163.245.213:27017

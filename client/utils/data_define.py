@@ -23,7 +23,6 @@ def decrypt(source_key: str, data: bytes):
 
 class DataDefine:
     def __init__(self, data: dict) -> None:
-
         # self.file_size: int | None = data.get("file_size")
         self.url: str | None = data.get("url")
         self.source_key: str | None = data.get("source_key")
@@ -40,7 +39,9 @@ class DataDefine:
 
         self.order_create_time: str | None = data.get("order_create_time")
 
-        self.info_text = {}
+        self.text_info = {}
+        self.bb_info = {}
+        self.key_value = []
 
     @property
     def download_img(self):
@@ -87,29 +88,29 @@ class DataDefine:
             "device_source": self.device_source,
             "device_no": self.device_no,
             "order_create_time": self.order_create_time,
-            "ben_name": self.info_text.get("beneficiary_name_value"),
-            # "ben_name_points": self.beneficiary_name.get("points"),
-            "ben_number": self.info_text.get("beneficiary_number_value"),
-            # # "ben_number_points": self.beneficiary_number.get("points"),
-            "ben_bank": self.info_text.get("beneficiary_bank_value"),
-            # # "ben_bank_points": self.beneficiary_bank.get("points"),
-            "payer_name": self.info_text.get("payer_name_value"),
-            # # "payer_name_points": self.payer_name.get("points"),
-            "payer_number": self.info_text.get("payer_number_value"),
-            # # "payer_number_points": self.payer_number.get("points"),
-            "payer_bank": self.info_text.get("payer_bank_value"),
-            # # "payer_bank_points": self.payer_bank.get("points"),
-            "trans_money": self.info_text.get("transfer_money"),
-            # # "trans_money_points": self.transfer_money.get("points"),
-            "trans_money_text": self.info_text.get("transfer_money_text_value"),
-            "balance": self.info_text.get("account_balance"),
-            # # "trans_money_text_points": self.transfer_money_text.get("points"),
-            "trans_time": self.info_text.get("transfer_time_value"),
-            # # "trans_time_points": self.transfer_time.get("points"),
-            "serial": self.info_text.get("serial_number_value"),
-            # # "serial_points": self.serial_number.get("points"),
-            "others_serial": self.info_text.get("others_serial_number_value"),
-            # # "others_serial_points": self.serial_number.get("points"),
-            "phone_time": self.info_text.get("phone_time"),
-            # # "phone_time_points": self.phone_time.get("points"),
+            "ben_name": self.text_info.get("beneficiary_name_value"),
+            "ben_name_loc": self.bb_info.get("beneficiary_name_value"),
+            "ben_number": self.text_info.get("beneficiary_number_value"),
+            "ben_number_loc": self.bb_info.get("beneficiary_number_value"),
+            "ben_bank": self.text_info.get("beneficiary_bank_value"),
+            "ben_bank_loc": self.bb_info.get("beneficiary_bank_value"),
+            "payer_name": self.text_info.get("payer_name_value"),
+            "payer_name_loc": self.bb_info.get("payer_name_value"),
+            "payer_number": self.text_info.get("payer_number_value"),
+            "payer_number_loc": self.bb_info.get("payer_number_value"),
+            "payer_bank": self.text_info.get("payer_bank_value"),
+            "payer_bank_loc": self.bb_info.get("payer_bank_value"),
+            "trans_money": self.text_info.get("transfer_money"),
+            "trans_money_loc": self.bb_info.get("transfer_money"),
+            "trans_money_text": self.text_info.get("transfer_money_text_value"),
+            "trans_money_text_loc": self.bb_info.get("transfer_money_text_value"),
+            "balance": self.text_info.get("account_balance"),
+            "balance_loc": self.bb_info.get("account_balance"),
+            "trans_time": self.text_info.get("transfer_time_value"),
+            "trans_time_loc": self.bb_info.get("transfer_time_value"),
+            "serial": self.text_info.get("serial_number_value"),
+            "serial_loc": self.bb_info.get("serial_number_value"),
+            "others_serial": self.text_info.get("others_serial_number_value"),
+            "others_serial_loc": self.bb_info.get("others_serial_number_value"),
+            "key_value": self.key_value
         }

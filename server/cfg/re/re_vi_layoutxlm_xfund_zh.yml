@@ -24,7 +24,7 @@ Architecture:
     name: LayoutXLMForRe
     pretrained: True
     mode: vi
-    checkpoints: ckpts/re_vi_layoutxlm_0407/best_accuracy
+    checkpoints: ckpts/re_vi_layoutxlm_0607/best_accuracy
 
 Loss:
   name: LossFromOutput
