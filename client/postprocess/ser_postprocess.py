@@ -1,55 +1,25 @@
 import yaml
+import numpy as np
 
-from utils.data_define import DataDefine
-
-from get_bill_info.utils.all_bank import *
-
-
-# def split_filed_info(cfg, info_dict: dict):
-#     # letter field first, number field last
-
-#     if info_dict["bank_code"] in cfg:
-#         current_class = cfg[info_dict["bank_code"]][0]
-#         future_class = cfg[info_dict["bank_code"]][1]  # only change number field
-#         if info_dict[future_class]:
-#             return
-
-#         current_text: str = info_dict[current_class].get("text")
-#         if current_text is not None:
-#             rm_char_ls = [" ", "(", ")", "（", "）", ">"]
-#             for char in rm_char_ls:
-#                 current_text = current_text.replace(char, "")
-
-#             for idx, char in enumerate(current_text):
-#                 if char.isnumeric():
-#                     info_dict[current_class]["text"] = current_text[:idx]
-
-#                     info_dict[future_class] = {}
-#                     info_dict[future_class]["text"] = current_text[idx:]
-#                     info_dict[future_class]["points"] = info_dict[current_class][
-#                         "points"
-#                     ]
-#                     info_dict[future_class]["conf"] = info_dict[current_class]["conf"]
-#                     break
-
-#     return
+from .banks.all_bank import *
+from .util import fit_bbox_2
 
 
-class InfoPostProcessing:
+class SERPostProcessing:
     def __init__(self) -> None:
         self.key_text_type = [
             "beneficiary_account_name_value",
             "payer_account_name_value",
         ]
 
-        with open("cfg/bill_info/check_bank_info.yaml") as f:
+        with open("postprocess/cfg/check_bank_info.yaml") as f:
             self.check_info = yaml.load(f, Loader=yaml.FullLoader)
             f.close()
 
         self.range_check = 3
 
     def check_text(self, info: dict, bank_code):
-        ch_rm_all_bank = self.check_info["character_rm_all_bank"]
+        ch_rm_all_bank = self.check_info["character_rm"]["all_bank"]
         for key in ch_rm_all_bank:
             if info.get(key) is not None:
                 info[key] = remove_character(info[key], ch_rm_all_bank[key])
@@ -77,8 +47,8 @@ class InfoPostProcessing:
 
         if info.get("transfer_time_value") is not None:
             info["transfer_time_value"] = format_time(info["transfer_time_value"])
-        if info.get("phone_time") is not None:
-            info["phone_time"] = format_phone_time(info["phone_time"])
+        # if info.get("phone_time") is not None:
+        #     info["phone_time"] = format_phone_time(info["phone_time"])
 
         check_len_value_all = self.check_info["len_value_all_bank"]
         for key in check_len_value_all:
@@ -92,6 +62,44 @@ class InfoPostProcessing:
                     info[key] = check_len(info[key], check_len_value[bank_code][key])
 
         return info
+
+    def __call__(self, model_res: list[dict], bank_code: str, img:np.ndarray) -> None:
+        texts = {}
+        boxes = {}
+        conf = {}
+
+        for idx, res in enumerate(model_res):
+            if res.get("pred") is None or res.get("pred") == "NONE":
+                continue
+
+            field = res["pred"].lower()
+
+            if field in texts:
+                continue
+
+            texts[field] = res["transcription"]
+            # two line
+            for i in range(1, self.range_check):
+                idx_2 = idx + i
+
+                if idx_2 >= len(model_res):
+                    break
+
+                if "pred" not in model_res[idx_2]:
+                    continue
+
+                if model_res[idx_2]["pred"].lower() == field:
+                    # Two lines of trans time are adjacent to each other
+                    if model_res[idx_2]["transcription"] != texts[field]:
+                        texts[field] += model_res[idx_2]["transcription"]
+
+            boxes[field] = res["points"]
+            # conf[field] = res["conf"]
+
+        for bb in boxes:
+            boxes[bb] = fit_bbox_2(img, boxes[bb])
+
+        return self.check_text(texts, bank_code), boxes
 
     # def __call__(self, model_res: list[dict], info: DataDefine) -> None:
     #     number_seri = 1
@@ -131,36 +139,32 @@ class InfoPostProcessing:
 
     #     return
 
-    def process(self, model_res: list[dict], bank_code: str) -> None:
-        info_text = {}
-        info_boxes = {}
-        info_conf = {}
 
-        for idx, res in enumerate(model_res):
-            if res.get("pred") is None or res.get("pred") == "NONE":
-                continue
+# def split_filed_info(cfg, info_dict: dict):
+#     # letter field first, number field last
 
-            field = res["pred"].lower()
+#     if info_dict["bank_code"] in cfg:
+#         current_class = cfg[info_dict["bank_code"]][0]
+#         future_class = cfg[info_dict["bank_code"]][1]  # only change number field
+#         if info_dict[future_class]:
+#             return
 
-            if field in info_text:
-                continue
+#         current_text: str = info_dict[current_class].get("text")
+#         if current_text is not None:
+#             rm_char_ls = [" ", "(", ")", "（", "）", ">"]
+#             for char in rm_char_ls:
+#                 current_text = current_text.replace(char, "")
 
-            info_text[field] = res["transcription"]
-            # two line
-            for i in range(1, self.range_check):
-                idx_2 = idx + i
+#             for idx, char in enumerate(current_text):
+#                 if char.isnumeric():
+#                     info_dict[current_class]["text"] = current_text[:idx]
 
-                if idx_2 >= len(model_res):
-                    break
+#                     info_dict[future_class] = {}
+#                     info_dict[future_class]["text"] = current_text[idx:]
+#                     info_dict[future_class]["points"] = info_dict[current_class][
+#                         "points"
+#                     ]
+#                     info_dict[future_class]["conf"] = info_dict[current_class]["conf"]
+#                     break
 
-                if "pred" not in model_res[idx_2]:
-                    continue
-
-                if model_res[idx_2]["pred"].lower() == field:
-                    # Two lines of trans time are adjacent to each other
-                    if model_res[idx_2]["transcription"] != info_text[field]:
-                        info_text[field] += model_res[idx_2]["transcription"]
-
-            info_conf[field] = res["conf"]
-
-        return self.check_text(info_text, bank_code)
+#     return

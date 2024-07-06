@@ -96,16 +96,16 @@ len_value:
   "282010":
     serial_number_value: 15
 
-character_rm_all_bank:
-  phone_time: [号, "@", 支, C, D, Q, "?", "a", "L"]
-  payer_name_value: [":", ：]
-  beneficiary_name_value: [":", ：]
-  beneficiary_number_value: [_, ▁, ：, ":", ",", ，, （, ）, (, ), ">"]
-  payer_number_value: [_, ▁, ：, ":", ",", ，, （, ）, (, ), ">"]
-  transfer_money: [金额：, ":", ：]
-  serial_number_value: ["|"]
-
 character_rm:
+  all_bank:
+    # phone_time: [号, "@", 支, C, D, Q, "?", "a", "L"]
+    payer_name_value: [":", ：]
+    beneficiary_name_value: [":", ：]
+    beneficiary_number_value: [_, ▁, ：, ":", ",", ，, （, ）, (, ), ">"]
+    payer_number_value: [_, ▁, ：, ":", ",", ，, （, ）, (, ), ">"]
+    serial_number_value: ["|"]
+    transfer_money: [金额：, ":", ：, ￥, ¥, 元]
+    account_balance: [金额：, ":", ：, ￥, ¥, 元]
   "101010":
     transfer_time_value: ["A"]
   "106010":
