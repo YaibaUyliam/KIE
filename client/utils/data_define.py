@@ -41,6 +41,7 @@ class DataDefine:
         self.order_create_time: str | None = data.get("order_create_time")
 
         self.info_text = {}
+        self.couples = []
 
     @property
     def download_img(self):

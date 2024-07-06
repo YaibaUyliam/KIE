@@ -8,7 +8,7 @@ from pytriton.client import ModelClient
 
 # from ultralytics import YOLO
 
-from get_bill_info import InfoPostProcessing
+from get_bill_info import InfoPostProcessing, REPostProcessing
 from utils.data_define import DataDefine
 from utils.mongo import Mongo
 
@@ -30,6 +30,7 @@ def send_request(img: np.ndarray, des="kie_server"):
 class KieClient:
     def __init__(self, config_path: str) -> None:
         self.post_res = InfoPostProcessing()
+        self.re_postprocess = REPostProcessing()
 
         with open(config_path) as f:
             cfg = safe_load(f)["test"]["KIE_db"]
@@ -51,6 +52,8 @@ class KieClient:
         re_res = json.loads(res_server["re_res"])
 
         info.info_text = self.post_res.process(ser_res[0], info.bank_code)
+        info.couples = self.re_postprocess(re_res)
+
         if not test_env:
             self.mongo_db.insert_one(
                 collection=self.name_table, document=info.info_save_db
@@ -74,8 +77,10 @@ if __name__ == "__main__":
     bytes_img = response.content
 
     img_nd = cv2.imdecode(np.frombuffer(bytes_img, dtype="uint8"), 1)
-    res_server = send_request(img_nd, des="localhost")
+    res_server = send_request(img_nd, des="172.19.16.45")
     ser_res = json.loads(res_server["ser_res"])
     re_res = json.loads(res_server["re_res"])
+    
 
-    print(re_res)
+    re_postprocess = REPostProcessing()
+    couples = re_postprocess(re_res, img_nd)
