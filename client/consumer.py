@@ -3,7 +3,7 @@ import yaml
 import logging
 import traceback
 import os
-import time
+from dotenv import load_dotenv
 
 import signal
 from multiprocessing.pool import ThreadPool
@@ -15,7 +15,9 @@ from utils.data_define import DataDefine
 from triton_client import KieClient  # , YoloClient
 
 
+config = load_dotenv()
 test_env = os.environ["TEST_ENV"].lower() == "true"
+print(test_env)
 
 if test_env is False:
     filename = "log/record_bill_info.log"
@@ -34,19 +36,15 @@ class BillInfo:
     def __init__(self):
         logging.info("Starting ....")
 
-        self.process = 5
+        self.process = int(os.environ["PROCESS"])
         self.pool = ThreadPool(self.process)
         self.lock = Lock()
         self.stop_event = Event()
 
         self.consumer = KafkaConsumer(
-            bootstrap_servers=[
-                "16.163.245.213:9092",
-                "16.163.245.213:9093",
-                "16.163.245.213:9094",
-            ],
+            bootstrap_servers=os.environ["KAFKA"].split(","),
             auto_offset_reset="earliest",
-            group_id="kie-test",
+            group_id=os.environ["GROUP_ID"],
             value_deserializer=lambda m: json.loads(m),
         )
 
@@ -61,18 +59,18 @@ class BillInfo:
         while True:
             try:
                 with self.lock:
-                    data = self.consumer.poll(timeout_ms=1000, max_records=1)
+                    data = self.consumer.poll(timeout_ms=2000, max_records=1)
 
                 for _, items in data.items():
                     for item in items:
                         item = item.value
                         info = DataDefine(item)
 
-                        # if item["bank_code"] not in self.bank_run:
-                        #     continue
+                        if item["bank_code"] not in self.bank_run:
+                            continue
 
                         if info.img_nd is not None:
-                            self.client_kie(info)
+                            self.client_kie(info, test_env)
 
                 if self.stop_event.is_set():
                     return

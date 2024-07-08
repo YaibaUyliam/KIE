@@ -63,7 +63,7 @@ class SERPostProcessing:
 
         return info
 
-    def __call__(self, model_res: list[dict], bank_code: str, img:np.ndarray) -> None:
+    def __call__(self, model_res: list[dict], bank_code: str, img:np.ndarray = None) -> None:
         texts = {}
         boxes = {}
         conf = {}
@@ -96,8 +96,9 @@ class SERPostProcessing:
             boxes[field] = res["points"]
             # conf[field] = res["conf"]
 
-        for bb in boxes:
-            boxes[bb] = fit_bbox_2(img, boxes[bb])
+        if img is not None:
+            for bb in boxes:
+                boxes[bb] = fit_bbox_2(img, boxes[bb])
 
         return self.check_text(texts, bank_code), boxes
 

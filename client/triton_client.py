@@ -1,7 +1,6 @@
 import numpy as np
 import json
 from yaml import safe_load
-from dotenv import load_dotenv
 import os
 
 from pytriton.client import ModelClient
@@ -12,11 +11,7 @@ from utils.data_define import DataDefine
 from utils.mongo import Mongo
 
 
-config = load_dotenv()
-test_env = os.environ["TEST_ENV"].lower() == "true"
-
-
-def send_request(img: np.ndarray, des="kie_server"):
+def infer(img: np.ndarray, des="kie_server"):
     with ModelClient(des, "KIE", init_timeout_s=80) as client:
         res_ocr = client.infer_sample(img)
 
@@ -34,7 +29,7 @@ class KieClient:
         self.mongo_db = Mongo(cfg=cfg, enable_signal=False)
         self.name_table = cfg["table"]
 
-    def __call__(self, data: DataDefine) -> None:
+    def __call__(self, data: DataDefine, test_env: bool) -> None:
         # Preprocessing image
         if data.bank_code in ["101010", "113010"] and data.check_camera == 0:
             img = rm_hidden_letter(data.img_nd)
@@ -43,7 +38,7 @@ class KieClient:
         else:
             img = data.img_nd
 
-        res_server = send_request(img, des="172.19.16.45")
+        res_server = infer(img, des="172.19.16.45")
         ser_res = json.loads(res_server["ser_res"])
         re_res = json.loads(res_server["re_res"])
 
@@ -78,7 +73,7 @@ if __name__ == "__main__":
     db = client["ai-team"]
     collection = db["classify_ocr"]
 
-    query = {"url": "https://ktpbds.aratalife.com/nfsxxf/cxwap01/fykzrm/2024/0701/585fe26649e146c5a37e84168516474e.jpeg"}
+    query = {"url": "https://ktpbds.aratalife.com/nfsxxf/cxwap01/v5ynpv/2024/0629/811c916489254adf95ed4a92cfc9e962.jpg"}
     sort_order = [("_id", -1)]
     projection = {}
 
@@ -91,7 +86,7 @@ if __name__ == "__main__":
     for item in order_list_dest:
         info = DataDefine(item)
         
-        client_kie(info)
+        client_kie(info, True)
         # img_nd = cv2.imdecode(np.frombuffer(bytes_img, dtype="uint8"), 1)
 
         # re_postprocess = REPostProcessing()

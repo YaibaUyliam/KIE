@@ -1,9 +1,7 @@
 services:
   kie_server:
-    build:
-      context: ./
-      dockerfile: server/Dockerfile
-    # restart: always
+    image: yaibawiliam/kie_server:v3.0.9
+    container_name: kie_server
     ports:
       - "8000:8000"
       - "8001:8001"
@@ -14,18 +12,21 @@ services:
     deploy:
       resources:
         reservations:
-          devices:
-          - driver: nvidia
-            device_ids: ['0']
-            capabilities: [gpu]
-    networks:
-      my-network:
+          generic_resources:
+            - discrete_resource_spec:
+                kind: 'NVIDIA-GPU'
+                value: 0
+          # devices:
+          # - driver: nvidia
+          #   device_ids: ['0']
+          #   capabilities: [gpu]
 
   kie_client:
-    build:
-      context: ./
-      dockerfile: client/Dockerfile
+    image: yaibawiliam/kie_client:v1.0
+    container_name: kie_client
     depends_on:
       - kie_server
-    networks:
-      my-network:
+    # environment:
+    #   DATABASE_HOST: kie_client
+    ports:
+      - "5000:5000"
