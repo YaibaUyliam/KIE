@@ -2,6 +2,7 @@ import numpy as np
 import argparse
 from typing import Any, List
 import logging
+import traceback
 import json
 import yaml
 import time
@@ -17,8 +18,13 @@ from PaddleOCR.tools.infer_kie_token_ser import SerPredictorV2
 from PaddleOCR.tools.infer_kie_token_ser_re import SerRePredictor
 
 
-config = load_dotenv()
-test_env = os.environ["TEST_ENV"].lower() == "true"
+load_dotenv()
+
+logging.basicConfig(
+    level=logging.INFO,
+    format=f"%(asctime)s %(levelname)s %(name)s : %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 
 def init_ser_model(cfg):
@@ -49,12 +55,25 @@ class _InferFuncWrapper:
         data["image"] = image[0]
         data["ocr_info"] = self._ocr_model(data)
 
-        ser_res, _ = self._ser_model(data.copy())
-        re_res = self._re_model(data.copy())
+        try:
+            ser_res, _ = self._ser_model(data.copy())
+        except Exception as e:
+            logger.error(e)
+            logger.error(type(e).__name__)
+            logger.error(traceback.format_exc())
+            ser_res = None
+
+        try:
+            re_res = self._re_model(data.copy())
+        except Exception as e:
+            logger.error(e)
+            logger.error(type(e).__name__)
+            logger.error(traceback.format_exc())
+            re_res = None
 
         return {
             "ser_res": np.array([json.dumps(ser_res, default=convert_to_python_float)]),
-            "re_res": np.array([json.dumps(re_res)])
+            "re_res": np.array([json.dumps(re_res)]),
         }
 
 
