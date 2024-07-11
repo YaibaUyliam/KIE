@@ -1,31 +1,45 @@
+version: "3.8"
+
 services:
-  kie_server:
-    build:
-      context: ./
-      dockerfile: server/Dockerfile
-    # restart: always
+  server:
+    image: yaibawiliam/kie_server:v3.1.5
     ports:
       - "8000:8000"
       - "8001:8001"
       - "8002:8002"
     volumes:
-      - /home/yaiba/project/KIE/server/log:/venv/log
-    shm_size: "1gb"
+      - type: tmpfs
+        target: /dev/shm
+        tmpfs:
+          size: 1200000000
+    environment:
+      NUMBER_OF_INSTANCES: 1
     deploy:
+      replicas: 1
       resources:
         reservations:
-          devices:
-          - driver: nvidia
-            device_ids: ['0']
-            capabilities: [gpu]
+          generic_resources:
+            - discrete_resource_spec:
+                kind: 'NVIDIA-GPU'
+                value: 0
+          # devices:
+          #   - driver: nvidia
+          #     device_ids: ['0']
+          #     capabilities: [gpu]
     networks:
-      my-network:
+      - network1
 
-  kie_client:
-    build:
-      context: ./
-      dockerfile: client/Dockerfile
-    depends_on:
-      - kie_server
+  client:
+    image: yaibawiliam/kie_client:v1.1.10
+    # container_name: kie_client # not support
+    # depends_on:
+    #   - kie_server
+    environment:
+      IP_DEST: kie_server
+    ports:
+      - "5003:5003"
     networks:
-      my-network:
+      - network1
+
+networks:
+  network1:
