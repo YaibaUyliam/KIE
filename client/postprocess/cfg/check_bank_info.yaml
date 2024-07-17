@@ -100,11 +100,15 @@ character_rm:
   all_bank:
     # phone_time: [号, "@", 支, C, D, Q, "?", "a", "L"]
     payer_name_value: [":", ：]
+    payer_number_value: [_, ▁, ：, ":", ",", ，, （, ）, (, ), ">"]
+    payer_bank_value: [":", ：]
     beneficiary_name_value: [":", ：]
     beneficiary_number_value: [_, ▁, ：, ":", ",", ，, （, ）, (, ), ">"]
-    payer_number_value: [_, ▁, ：, ":", ",", ，, （, ）, (, ), ">"]
-    serial_number_value: ["|"]
+    beneficiary_bank_value: [":", ：]
+    serial_number_value: [":", ：, "|"]
+    others_serial_number_value: [":", ：]
     transfer_money: [金额：, ":", ：, ￥, ¥, 元]
+    transfer_money_text_value: [":", ：]
     account_balance: [金额：, ":", ：, ￥, ¥, 元]
   "101010":
     transfer_time_value: ["A"]
