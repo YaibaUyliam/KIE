@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 import requests
 import os
+import pickle
 
 import base64
 import io
@@ -30,9 +31,12 @@ app = Flask(__name__)
 app.secret_key = "yaiba"
 
 
-def infer(img: np.ndarray, des="kie_server"):
+def infer(img: np.ndarray, ocr_res: list, des="kie_server"):
     with ModelClient(des, "KIE", init_timeout_s=80) as client:
-        res_ocr = client.infer_sample(img)
+        ocr_res = pickle.dumps(ocr_res, protocol=pickle.HIGHEST_PROTOCOL)
+        ocr_res = np.array([ocr_res])
+
+        res_ocr = client.infer_sample(img, ocr_res)
 
     return res_ocr
 
@@ -66,19 +70,22 @@ def ser_re_visual():
     try:
         if request.mimetype == "multipart/form-data":
             data = request.files["file"]
+            ocr = []
 
             img_stream = io.BytesIO(data.read())
             img = Image.open(img_stream)
             img = np.array(img)[:, :, ::-1]
 
         elif request.mimetype == "application/json":
-            data = request.json["url"]
+            data = request.json
+            url = data["url"]
+            ocr = data.get("ocr", [])
 
-            if "data:image" in data:
-                img = base64_to_cv2(data)
+            if "data:image" in url:
+                img = base64_to_cv2(url)
 
             else:
-                response = requests.get(data, timeout=(120, 120)).content
+                response = requests.get(url, timeout=(120, 120)).content
                 img_bytes = io.BytesIO(response)
                 img = Image.open(img_bytes)
                 img = np.array(img)[:, :, :3][:, :, ::-1]
@@ -86,7 +93,7 @@ def ser_re_visual():
         else:
             return {"img_ser": None, "img_ser_post": None, "img_re": None}
 
-        model_res = infer(img, os.environ.get("IP_DEST"))
+        model_res = infer(img, ocr, os.environ.get("IP_DEST"))
 
         ser_res = json.loads(model_res["ser_res"])
         re_res = json.loads(model_res["re_res"])

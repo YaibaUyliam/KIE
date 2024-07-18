@@ -56,8 +56,8 @@ if uploaded_file is not None or url is not None:
             result_1_b64 = data["img_ser"]
             result_2_b64 = data["img_re"]
             result_3 = data["img_ser_post"]
-            result_1 = base64.b64decode(result_1_b64)
-            result_2 = base64.b64decode(result_2_b64)
+            result_1 = base64.b64decode(result_1_b64.split(",")[1])
+            result_2 = base64.b64decode(result_2_b64.split(",")[1])
 
             with col1:
                 st.image(result_2, caption="Result RE", use_column_width=True)
