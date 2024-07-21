@@ -71,6 +71,7 @@ def ser_re_visual():
         if request.mimetype == "multipart/form-data":
             data = request.files["file"]
             ocr = []
+            text_only = None
 
             img_stream = io.BytesIO(data.read())
             img = Image.open(img_stream)
@@ -79,7 +80,9 @@ def ser_re_visual():
         elif request.mimetype == "application/json":
             data = request.json
             url = data["url"]
+            # will query db in future
             ocr = data.get("ocr", [])
+            text_only = data.get("text")
 
             if "data:image" in url:
                 img = base64_to_cv2(url)
@@ -102,7 +105,7 @@ def ser_re_visual():
         ser_res_post = None
         img_re_res = None
         if ser_res is not None:
-            ser_res_post, _ = ser_postprocess(ser_res[0], None)
+            ser_res_post, _ = ser_postprocess(ser_res[0], None, img, text_only)
             img_draw_ser = draw_ser_results(
                 img, ser_res[0], font_path="fonts/simfang.ttf"
             )

@@ -2,6 +2,7 @@ import numpy as np
 import json
 from yaml import safe_load
 import os
+import pickle
 
 from pytriton.client import ModelClient
 
@@ -11,9 +12,12 @@ from utils.data_define import DataDefine
 from utils.mongo import Mongo
 
 
-def infer(img: np.ndarray, des="kie_server"):
+def infer(img: np.ndarray, ocr_res: list, des="kie_server"):
     with ModelClient(des, "KIE", init_timeout_s=80) as client:
-        res_ocr = client.infer_sample(img)
+        ocr_res = pickle.dumps(ocr_res, protocol=pickle.HIGHEST_PROTOCOL)
+        ocr_res = np.array([ocr_res])
+
+        res_ocr = client.infer_sample(img, ocr_res)
 
     return res_ocr
 
@@ -38,19 +42,21 @@ class KieClient:
         else:
             img = data.img_nd
 
-        res_server = infer(img, des="172.19.16.45")
+        res_server = infer(img, data.ocr_res, os.environ.get("IP_DEST"))
         ser_res = json.loads(res_server["ser_res"])
         re_res = json.loads(res_server["re_res"])
 
-        data.text_info, data.bb_info = self.ser_postprocess(ser_res[0], data.bank_code, img)
+        data.text_info, data.bb_info = self.ser_postprocess(
+            ser_res[0], data.bank_code, img, data.text_bill
+        )
         data.key_value = self.re_postprocess(re_res, img)
 
-        if not test_env:
-            self.mongo_db.insert_one(
-                collection=self.name_table, document=data.info_save_db
-            )
+        # if not test_env:
+        #     self.mongo_db.insert_one(
+        #         collection=self.name_table, document=data.info_save_db
+        #     )
 
-        return
+        return data.info_cls_ocr, data.info_save_db, data.key_value
 
 
 if __name__ == "__main__":
@@ -73,7 +79,9 @@ if __name__ == "__main__":
     db = client["ai-team"]
     collection = db["classify_ocr"]
 
-    query = {"url": "https://ktpbds.aratalife.com/nfsxxf/cxwap01/v5ynpv/2024/0629/811c916489254adf95ed4a92cfc9e962.jpg"}
+    query = {
+        "url": "https://ktpbds.aratalife.com/nfsxxf/cxwap01/v5ynpv/2024/0629/811c916489254adf95ed4a92cfc9e962.jpg"
+    }
     sort_order = [("_id", -1)]
     projection = {}
 
@@ -85,7 +93,7 @@ if __name__ == "__main__":
 
     for item in order_list_dest:
         info = DataDefine(item)
-        
+
         client_kie(info, True)
         # img_nd = cv2.imdecode(np.frombuffer(bytes_img, dtype="uint8"), 1)
 
@@ -104,7 +112,6 @@ if __name__ == "__main__":
 
         # print(text_info)
         # print(bb_info)
-
 
         # with open("./cfg") as f:
         #     cfg = safe_load(f)["test"]["KIE_db"]
