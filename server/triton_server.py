@@ -1,7 +1,6 @@
 import numpy as np
 import argparse
 from typing import Any, List
-import logging
 import traceback
 import json
 import yaml
@@ -9,9 +8,10 @@ import time
 from dotenv import load_dotenv
 import os
 import pickle
+from loguru import logger
 
 from pytriton.model_config import ModelConfig, Tensor
-from pytriton.triton import Triton  # , TritonConfig
+from pytriton.triton import Triton, TritonConfig
 from pytriton.decorators import batch  # , fill_optionals
 
 from ocr import run_ocr, convert
@@ -20,13 +20,6 @@ from PaddleOCR.tools.infer_kie_token_ser_re import SerRePredictor
 
 
 load_dotenv()
-
-logging.basicConfig(
-    level=logging.INFO,
-    format=f"%(asctime)s %(levelname)s %(name)s : %(message)s",
-)
-logger = logging.getLogger(__name__)
-
 
 cfg_ser = yaml.safe_load(open("cfg/ser/ser_vi_layoutxlm.yaml"))
 cfg_cer_for_re = yaml.safe_load(open("cfg/re/ser_vi_layoutxlm_xfund_zh.yml"))
@@ -49,8 +42,6 @@ def convert_to_python_float(obj):
 
 class _InferFuncWrapper:
     def __init__(self, ser_model, re_model, device: str):
-        # paddle.set_device('gpu:0')
-
         # self._ocr_model = ocr_model
         self._ser_model = ser_model
         self._re_model = re_model
@@ -61,9 +52,12 @@ class _InferFuncWrapper:
     def __call__(self, image: np.ndarray, ocr: np.object_) -> dict:
         data = {}
         data["image"] = image[0]
+        logger.info(data["image"].shape)
+        time_s = time.time()
 
         ocr = pickle.loads(ocr[0][0])
         if len(ocr) == 0:
+            logger.warning("Using PaddleOcr !!!")
             data["ocr_info"] = run_ocr(cfg_ser["Global"], image[0])
         else:
             data["ocr_info"] = convert(ocr[0])
@@ -72,22 +66,18 @@ class _InferFuncWrapper:
         # print(type(data["ocr_info"]))
         # print(data["ocr_info"])
 
+        ser_res = None
+        re_res = None
         try:
             ser_res, _ = self._ser_model(data.copy())
-        except Exception as e:
-            logger.error(e)
-            logger.error(type(e).__name__)
-            logger.error(traceback.format_exc())
-            ser_res = None
-
-        try:
             re_res = self._re_model(data.copy())
+
         except Exception as e:
             logger.error(e)
             logger.error(type(e).__name__)
             logger.error(traceback.format_exc())
-            re_res = None
 
+        logger.info(time.time() - time_s)
         return {
             "ser_res": np.array([json.dumps(ser_res, default=convert_to_python_float)]),
             "re_res": np.array([json.dumps(re_res)]),
@@ -150,7 +140,6 @@ def main():
             ),
             strict=False,
         )
-        # logging.info("Serving model")
         triton.serve()
 
 
