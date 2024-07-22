@@ -5,6 +5,49 @@ from .banks.all_bank import *
 from .util import fit_bbox_2
 
 
+def get_phone_time(text: str):
+    try:
+        for ch_split in [":", "："]:
+            two_dot_list = text.split(ch_split)
+            if len(two_dot_list) < 2:
+                continue
+
+            if len(two_dot_list[0]) >= 2:
+                hour = two_dot_list[0][-2:]
+            elif len(two_dot_list[0]) == 0:
+                continue
+            else:
+                hour = two_dot_list[0][-1:]
+
+            if len(two_dot_list[1]) < 2:
+                continue
+            minute = two_dot_list[1][:2]
+
+            res = ""
+            for idx, ch in enumerate(hour):
+                if ch.isnumeric():
+                    res += ch
+
+                else:
+                    if idx == len(hour) - 1:
+                        continue
+
+            res += ":"
+
+            for ch in minute:
+                if ch.isnumeric():
+                    res += ch
+                else:
+                    continue
+
+            return res
+
+    except:
+        return None
+
+    return None
+
+
 class SERPostProcessing:
     def __init__(self) -> None:
         self.key_text_type = [
@@ -63,13 +106,27 @@ class SERPostProcessing:
 
         return info
 
-    def __call__(self, model_res: list[dict], bank_code: str, img:np.ndarray = None) -> None:
+    def __call__(
+        self,
+        model_res: list[dict],
+        bank_code: str,
+        img: np.ndarray,
+        text_bill: str = None,
+    ) -> None:
         texts = {}
         boxes = {}
         conf = {}
 
+        if text_bill is not None:
+            phone_time = get_phone_time(text_bill)
+
         for idx, res in enumerate(model_res):
             if res.get("pred") is None or res.get("pred") == "NONE":
+                if text_bill is not None:
+                    if "phone_time" not in texts and phone_time in res["transcription"]:
+                        texts["phone_time"] = phone_time
+                        boxes["phone_time"] = res["points"]
+
                 continue
 
             field = res["pred"].lower()
