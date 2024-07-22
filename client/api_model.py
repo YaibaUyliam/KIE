@@ -6,6 +6,7 @@ from flask import Flask, request, jsonify
 import requests
 import os
 import pickle
+import time
 
 import base64
 import io
@@ -13,10 +14,11 @@ import cv2
 from PIL import Image
 import numpy as np
 
-from utils.visual import draw_ser_results, draw_re_results
 from pytriton.client import ModelClient
+from pymongo import MongoClient
 
 from postprocess import SERPostProcessing
+from utils.visual import draw_ser_results, draw_re_results
 
 
 load_dotenv()  # By default, load_dotenv doesn't override existing environment variables.
@@ -29,6 +31,21 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 app.secret_key = "yaiba"
+
+
+client = MongoClient(
+    os.environ.get("URL_DB"),
+    serverSelectionTimeoutMS=5000,
+)
+db = client["ai-team"]
+collection = db["classify_ocr"]
+projection = {
+    "ocr_origin_strange_font": 1,
+    "text_by_line_strange_font": 1,
+}
+
+limit = 1000
+sort_order = [("_id", -1)]
 
 
 def infer(img: np.ndarray, ocr_res: list, des="kie_server"):
@@ -81,8 +98,7 @@ def ser_re_visual():
             data = request.json
             url = data["url"]
             # will query db in future
-            ocr = data.get("ocr", [])
-            text_only = data.get("text")
+            logging.info(url)
 
             if "data:image" in url:
                 img = base64_to_cv2(url)
@@ -93,10 +109,20 @@ def ser_re_visual():
                 img = Image.open(img_bytes)
                 img = np.array(img)[:, :, :3][:, :, ::-1]
 
+                time_s = time.time()
+                query = {"url": url}
+                order_list = list(collection.find(query, projection))
+                logging.info("Time query DB: %s", time.time() - time_s)
+
+                ocr = order_list[0].get("ocr_origin_strange_font", [])
+                text_only = order_list[0].get("text_by_line_strange_font")
+
         else:
             return {"img_ser": None, "img_ser_post": None, "img_re": None}
 
+        time_s = time.time()
         model_res = infer(img, ocr, os.environ.get("IP_DEST"))
+        logging.info("Time model infer: %s", time.time() - time_s)
 
         ser_res = json.loads(model_res["ser_res"])
         re_res = json.loads(model_res["re_res"])
