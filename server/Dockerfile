@@ -1,5 +1,5 @@
 # FROM nvcr.io/nvidia/tritonserver:23.10-py3
-FROM nvcr.io/nvidia/tritonserver:23.10-py3-min
+FROM nvcr.io/nvidia/tritonserver:24.05-py3-min
 
 # RUN apt-get update
 RUN apt-get update && apt-get install -y --no-install-recommends python3 python3-pip
@@ -16,6 +16,7 @@ RUN apt-get install -y libgl1-mesa-dev
 # RUN python3 -m pip install paddlepaddle-gpu==2.5.2.post120 -f https://www.paddlepaddle.org.cn/whl/linux/cudnnin/stable.html
 RUN python3 -m pip install paddlepaddle-gpu==2.6.1.post120 -f https://www.paddlepaddle.org.cn/whl/linux/cudnnin/stable.html
 RUN python3 -m pip install paddleocr==2.7.0.3 -I blinker
+RUN python3 -m pip install paddlenlp==2.8.1
 
 COPY ./server/requirements.txt /venv/requirements.txt
 WORKDIR /venv
