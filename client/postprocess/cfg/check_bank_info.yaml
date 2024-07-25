@@ -105,7 +105,7 @@ character_rm:
     beneficiary_name_value: [":", ：]
     beneficiary_number_value: [_, ▁, ：, ":", ",", ，, （, ）, (, ), ">"]
     beneficiary_bank_value: [":", ：]
-    serial_number_value: [":", ：, "|"]
+    serial_number_value: [":", ：, "|", "<"]
     others_serial_number_value: [":", ：]
     transfer_money: [金额：, ":", ：, ￥, ¥, 元]
     transfer_money_text_value: [":", ：]
@@ -114,14 +114,19 @@ character_rm:
     transfer_time_value: ["A"]
   "106010":
     payer_name_value: ["向您转账", "向您"]
+  "106030":
+    beneficiary_bank_value: [天天正收益]
   "114010":
     transfer_time_value: ["发银行", "表", "用", "意", "纯", "辣"]
   "118010":
     others_serial_number_value: ["专用章"]
   "182010":
     serial_number_value: ["K"]
+  "236020":
+    transfer_time_value: [于, 转账]
   "243020":
     payer_bank_value: ["("]
+
 # split_letter_number:
 #   "103020": [beneficiary_account_name_value, beneficiary_account_number_value]
 #   "103060": [beneficiary_account_name_value, beneficiary_account_number_value]

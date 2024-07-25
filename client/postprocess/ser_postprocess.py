@@ -122,7 +122,7 @@ class SERPostProcessing:
 
         for idx, res in enumerate(model_res):
             if res.get("pred") is None or res.get("pred") == "NONE":
-                if text_bill is not None:
+                if text_bill is not None and phone_time is not None:
                     if "phone_time" not in texts and phone_time in res["transcription"]:
                         texts["phone_time"] = phone_time
                         boxes["phone_time"] = res["points"]

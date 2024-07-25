@@ -237,7 +237,7 @@ def format_time(text: str):
     ):
         text = text[:10] + " " + text[10:]
 
-    if len(text) not in [8, 10, 11, 16, 19]:
+    if len(text) not in [8, 10, 11, 16, 18, 19]:
         text = None
 
     return text
