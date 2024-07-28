@@ -13,6 +13,7 @@ from loguru import logger
 from pytriton.model_config import ModelConfig, Tensor
 from pytriton.triton import Triton, TritonConfig
 from pytriton.decorators import batch  # , fill_optionals
+from pytriton.exceptions import PyTritonUnrecoverableError
 
 from ocr import run_ocr, convert
 from PaddleOCR.tools.infer_kie_token_ser import SerPredictorV2
@@ -50,25 +51,22 @@ class _InferFuncWrapper:
     # @fill_optionals(get_info=np.array([False], dtype=np.int8))
     @batch
     def __call__(self, image: np.ndarray, ocr: np.object_) -> dict:
-        data = {}
-        data["image"] = image[0]
-        logger.info(data["image"].shape)
         time_s = time.time()
-
-        ocr = pickle.loads(ocr[0][0])
-        if len(ocr) == 0:
-            logger.warning("Using PaddleOcr !!!")
-            data["ocr_info"] = run_ocr(cfg_ser["Global"], image[0])
-        else:
-            data["ocr_info"] = convert(ocr[0])
-
-        # data["ocr_info"] = self._ocr_model(data)
-        # print(type(data["ocr_info"]))
-        # print(data["ocr_info"])
-
         ser_res = None
         re_res = None
+
         try:
+            data = {}
+            data["image"] = image[0]
+            logger.info(data["image"].shape)
+
+            ocr = pickle.loads(ocr[0][0])
+            if len(ocr) == 0:
+                logger.warning("Using PaddleOcr !!!")
+                data["ocr_info"] = run_ocr(cfg_ser["Global"], image[0])
+            else:
+                data["ocr_info"] = convert(ocr[0])
+
             ser_res, _ = self._ser_model(data.copy())
             re_res = self._re_model(data.copy())
 
@@ -76,6 +74,12 @@ class _InferFuncWrapper:
             logger.error(e)
             logger.error(type(e).__name__)
             logger.error(traceback.format_exc())
+
+            if type(e).__name__ == "OSError":
+                raise PyTritonUnrecoverableError(
+                    "Some unrecoverable error occurred, "
+                    "thus no further inferences are possible."
+                ) from e
 
         logger.info(time.time() - time_s)
         return {
