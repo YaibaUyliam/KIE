@@ -22,31 +22,60 @@ def decrypt(source_key: str, data: bytes):
 
 
 class DataDefine:
+    # def __init__(self, data: dict) -> None:
+    #     # self.file_size: int | None = data.get("file_size")
+    #     self.url: str = data.get("url")
+    #     self.source_key: str = data.get("source_key")
+    #     self.download_img
+    #     self.bank_code: str = data.get("bank_code")
+    #     self.bank_name: str = data.get("bank_name")
+    #     self.check_camera: int = data.get("check_camera")
+    #     self.order_amount: float = data.get("order_amount")
+    #     self.order_no: str = data.get("order_no")
+    #     self.site_name: str = data.get("site_name")
+    #     self.user_name: str = data.get("user_name")
+    #     self.device_source: str = data.get("device_source")
+    #     self.device_no: str = data.get("device_no")
+
+    #     self.order_create_time: str = data.get("order_create_time")
+    #     self.order_confirm_time: str = data.get("order_confirm_time")
+
+    #     self.ocr_res = data.get("ocr_origin_strange_font")
+    #     self.text_bill = data.get("textByLine_new")
+
+    #     self.text_info = {}
+    #     self.bb_info = {}
+    #     self.kie_re = []
+        
     def __init__(self, data: dict) -> None:
         # self.file_size: int | None = data.get("file_size")
-        self.url: str = data.get("url")
-        self.source_key: str = data.get("source_key")
-        self.download_img
+        self.url: str = None
+        self.source_key: str = None
+
         self.bank_code: str = data.get("bank_code")
-        self.bank_name: str = data.get("bank_name")
-        self.check_camera: int = data.get("check_camera")
-        self.order_amount: float = data.get("order_amount")
+        self.bank_name: str = None
+        self.check_camera: int = None
+        self.order_amount: float = None
         self.order_no: str = data.get("order_no")
-        self.site_name: str = data.get("site_name")
-        self.user_name: str = data.get("user_name")
-        self.device_source: str = data.get("device_source")
-        self.device_no: str = data.get("device_no")
+        self.site_name: str = None
+        self.user_name: str = None
+        self.device_source: str = None
+        self.device_no: str = None
 
-        self.order_create_time: str = data.get("order_create_time")
-        self.order_confirm_time: str = data.get("order_confirm_time")
+        self.order_create_time: str = None
+        self.order_confirm_time: str = None
 
-        self.ocr_res = data.get("ocr_res_origin_new")
-        self.text_bill = data.get("textByLine_new")
+        self.ocr_res = []
+        self.text_bill = None
 
         self.text_info = {}
         self.bb_info = {}
-        self.key_value = []
+        self.kie_re = []
 
+        self.bytes_img = None
+        self.img_nd = data.get("img_nd")
+
+        
     @property
     def download_img(self):
         if self.url:
@@ -116,7 +145,7 @@ class DataDefine:
             "serial_loc": self.bb_info.get("serial_number_value"),
             "others_serial": self.text_info.get("others_serial_number_value"),
             "others_serial_loc": self.bb_info.get("others_serial_number_value"),
-            "key_value": self.key_value,
+            "key_value": self.kie_re,
         }
 
     @property
@@ -134,4 +163,36 @@ class DataDefine:
             "trans_time": self.text_info.get("transfer_time_value"),
             "seri_number": self.text_info.get("serial_number_value"),
             "others_serial": self.text_info.get("others_serial_number_value"),
+        }
+    
+
+    @property
+    def kie_ser(self):
+        return {
+            "phone_time": self.text_info.get("phone_time"),
+            "phone_time_loc": self.bb_info.get("phone_time"),
+            "ben_name": self.text_info.get("beneficiary_name_value"),
+            "ben_name_loc": self.bb_info.get("beneficiary_name_value"),
+            "ben_number": self.text_info.get("beneficiary_number_value"),
+            "ben_number_loc": self.bb_info.get("beneficiary_number_value"),
+            "ben_bank": self.text_info.get("beneficiary_bank_value"),
+            "ben_bank_loc": self.bb_info.get("beneficiary_bank_value"),
+            "payer_name": self.text_info.get("payer_name_value"),
+            "payer_name_loc": self.bb_info.get("payer_name_value"),
+            "payer_number": self.text_info.get("payer_number_value"),
+            "payer_number_loc": self.bb_info.get("payer_number_value"),
+            "payer_bank": self.text_info.get("payer_bank_value"),
+            "payer_bank_loc": self.bb_info.get("payer_bank_value"),
+            "trans_money": self.text_info.get("transfer_money"),
+            "trans_money_loc": self.bb_info.get("transfer_money"),
+            "trans_money_text": self.text_info.get("transfer_money_text_value"),
+            "trans_money_text_loc": self.bb_info.get("transfer_money_text_value"),
+            "balance": self.text_info.get("account_balance"),
+            "balance_loc": self.bb_info.get("account_balance"),
+            "trans_time": self.text_info.get("transfer_time_value"),
+            "trans_time_loc": self.bb_info.get("transfer_time_value"),
+            "serial": self.text_info.get("serial_number_value"),
+            "serial_loc": self.bb_info.get("serial_number_value"),
+            "others_serial": self.text_info.get("others_serial_number_value"),
+            "others_serial_loc": self.bb_info.get("others_serial_number_value"),
         }
