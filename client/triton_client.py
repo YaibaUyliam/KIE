@@ -69,13 +69,18 @@ class KieClient:
 def call_api(filename):
     try:
         if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.tiff', '.bmp', '.gif')):
+            order_no = filename.split('_')[0] if '-' in filename else filename.split('.')[0]
+
+            if os.path.exists(f'{ouput_path}/{order_no}.jpg'):
+                return
+
             img_path = os.path.join(folder_path, filename)
             img = cv2.imread(img_path)
 
             data = {
                 'img_nd': img,
                 'bank_code': bank_code,
-                'order_no': filename.split('_')[0] if '-' in filename else filename.split('.')[0],
+                'order_no': order_no,
             }
             info = DataDefine(data)
             order_no, kie_ser, kie_re, img_draw_ser, img_draw_re = client_kie(info, True)
@@ -146,7 +151,7 @@ if __name__ == "__main__":
     import json
 
     bank_code = '243020'
-    folder_path = '/home/shaun/Music/hiro/image_zfbv2/image/fake'
+    folder_path = '/home/shaun/Music/hiro/image_zfbv2/image/real_1'
     txt_path = f'{folder_path}.txt'
 
     ouput_path = f'{folder_path}_[ser_re]'
