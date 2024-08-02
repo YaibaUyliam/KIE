@@ -110,12 +110,19 @@ def ser_re_visual():
                 img = np.array(img)[:, :, :3][:, :, ::-1]
 
                 time_s = time.time()
-                query = {"url": url}
-                order_list = list(collection.find(query, projection))
-                logging.info("Time query DB: %s", time.time() - time_s)
+                if (
+                    data.get("ocr_origin_strange_font") is not None
+                    and data.get("text_by_line_strange_font") is not None
+                ):
+                    order_list = data
 
-                ocr = order_list[0].get("ocr_origin_strange_font", [])
-                text_only = order_list[0].get("text_by_line_strange_font")
+                else:
+                    query = {"url": url}
+                    order_list = list(collection.find(query, projection))[0]
+                    logging.info("Time query DB: %s", time.time() - time_s)
+
+                ocr = order_list.get("ocr_origin_strange_font", [])
+                text_only = order_list.get("text_by_line_strange_font")
 
         else:
             return {"img_ser": None, "img_ser_post": None, "img_re": None}

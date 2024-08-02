@@ -15,7 +15,7 @@ from pytriton.triton import Triton, TritonConfig
 from pytriton.decorators import batch  # , fill_optionals
 from pytriton.exceptions import PyTritonUnrecoverableError
 
-from ocr import run_ocr, convert
+from ocr import run_ocr, convert, OcrEngine
 from PaddleOCR.tools.infer_kie_token_ser import SerPredictorV2
 from PaddleOCR.tools.infer_kie_token_ser_re import SerRePredictor
 
@@ -42,8 +42,8 @@ def convert_to_python_float(obj):
 
 
 class _InferFuncWrapper:
-    def __init__(self, ser_model, re_model, device: str):
-        # self._ocr_model = ocr_model
+    def __init__(self, ocr_model, ser_model, re_model, device: str):
+        self._ocr_model = ocr_model
         self._ser_model = ser_model
         self._re_model = re_model
         self._device = device
@@ -63,7 +63,8 @@ class _InferFuncWrapper:
             ocr = pickle.loads(ocr[0][0])
             if len(ocr) == 0:
                 logger.warning("Using PaddleOcr !!!")
-                data["ocr_info"] = run_ocr(cfg_ser["Global"], image[0])
+                # data["ocr_info"] = run_ocr(cfg_ser["Global"], image[0])
+                data["ocr_info"] = self._ocr_model(data)
             else:
                 data["ocr_info"] = convert(ocr[0])
 
@@ -92,11 +93,11 @@ def _infer_function_factory(devices: List[str]):
     infer_funcs = []
 
     for device in devices:
-        # ocr_model = OcrEngine(cfg_ser["Global"])
+        ocr_model = OcrEngine(cfg_ser["Global"])
         ser_model = init_ser_model(cfg_ser)
         re_model = init_re_model(cfg_re, cfg_cer_for_re)
 
-        infer_funcs.append(_InferFuncWrapper(ser_model, re_model, device=device))
+        infer_funcs.append(_InferFuncWrapper(ocr_model, ser_model, re_model, device=device))
 
     return infer_funcs
 

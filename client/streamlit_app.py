@@ -14,21 +14,28 @@ load_dotenv()  # By default, load_dotenv doesn't override existing environment v
 client = MongoClient(os.environ.get("URL_DB"), serverSelectionTimeoutMS=5000)
 db = client["ai-team"]
 collection = db["classify_ocr"]
-projection = {"url": 1, "_id": 0}
+projection = {
+    "_id": 0,
+    "url": 1,
+    "order_no": 1,
+    "text_by_line": 1,
+    "ocr_origin_strange_font": 1,
+    "text_by_line_strange_font": 1,
+}
 sort_order = [("_id", -1)]
-limit = 20
+limit = 30
 
 st.set_page_config(layout="wide")
 st.title("Key Info Extraction")
 
 # num_rows = st.slider("Number of rows", min_value=1, max_value=10)
 
-url = st.text_input("Nhập URL của bạn vào đây")
+url_input = st.text_input("Nhập URL của bạn vào đây")
 bank_code = st.text_input("Nhập bank code của bạn vào đây")
 uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "png", "jpeg"])
 
 
-if uploaded_file or url or bank_code:
+if uploaded_file or url_input or bank_code:
     headers = {}
     files = {}
 
@@ -45,9 +52,9 @@ if uploaded_file or url or bank_code:
         ]
         order_list = [{}]
 
-    elif url:
+    elif url_input:
         headers = {"Content-Type": "application/json"}
-        order_list = [{"url": url}]
+        order_list = [{"url": url_input}]
 
     else:
         headers = {"Content-Type": "application/json"}
@@ -58,10 +65,11 @@ if uploaded_file or url or bank_code:
         )
 
     if st.button("Process Image"):
-        for payload in order_list:
+        for order in order_list:
             col1, col2, col3 = st.columns(3)
 
-            payload = json.dumps(payload)
+            url = order["url"]
+            payload = json.dumps(order)
 
             response = requests.request(
                 "POST",
@@ -77,6 +85,9 @@ if uploaded_file or url or bank_code:
                 result_1_b64 = data["img_ser"]
                 result_2_b64 = data["img_re"]
                 result_3 = data["img_ser_post"]
+                result_3["url"] = url
+                result_3["order_no"] = order.get("order_no")
+                result_3["text_only"] = order.get("text_by_line")
 
                 result_1, result_2 = None, None
                 if result_1_b64:
@@ -91,7 +102,12 @@ if uploaded_file or url or bank_code:
                         else:
                             pass
                     with col2:
-                        st.image(result_1, caption="Result SER", use_column_width=True)
+                        if result_1:
+                            st.image(
+                                result_1, caption="Result SER", use_column_width=True
+                            )
+                        else:
+                            pass
                     with col3:
                         st.write(result_3)
 
