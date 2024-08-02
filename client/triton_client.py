@@ -69,7 +69,7 @@ class KieClient:
 def call_api(filename):
     try:
         if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.tiff', '.bmp', '.gif')):
-            order_no = filename.split('_')[0] if '-' in filename else filename.split('.')[0]
+            order_no = filename.split('_')[0] if '_' in filename else filename.split('.')[0]
 
             if os.path.exists(f'{ouput_path}/{order_no}.jpg'):
                 return
@@ -93,14 +93,16 @@ def call_api(filename):
 
 
             # Save txt 
-            data_dict = {
-                order_no: {
-                    'kie_ser': kie_ser,
-                    'kie_re': kie_re
-                }
+            output_dict = {
+                'order_no': order_no,
+                'bank_code': bank_code,
+                'kie_ser': kie_ser,
+                'kie_re': kie_re,
             }
-            with open(txt_path, 'a', encoding='utf-8') as file:
-                file.write(json.dumps(data_dict) + '\n')
+            base_name = filename.split('.')[0]
+            json_file_path = f'{json_output_path}/{base_name}.json'
+            with open(json_file_path, 'w', encoding='utf-8') as file:
+                json.dump(output_dict, file, indent=4, ensure_ascii=False)
     except:
         import traceback
         print(traceback.format_exc())
@@ -152,10 +154,11 @@ if __name__ == "__main__":
 
     bank_code = '243020'
     folder_path = '/home/shaun/Music/hiro/image_zfbv2/image/real_1'
-    txt_path = f'{folder_path}.txt'
 
     ouput_path = f'{folder_path}_[ser_re]'
     os.makedirs(ouput_path, exist_ok=True)
+    json_output_path = f'{folder_path}_[json]'
+    os.makedirs(json_output_path, exist_ok=True)
 
     client_kie = KieClient(config_path="cfg/mongo.yaml")  
 
