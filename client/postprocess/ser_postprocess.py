@@ -59,7 +59,7 @@ class SERPostProcessing:
             self.check_info = yaml.load(f, Loader=yaml.FullLoader)
             f.close()
 
-        self.range_check = 3
+        # self.range_check = 3
 
     def check_text(self, info: dict, bank_code):
         ch_rm_all_bank = self.check_info["character_rm"]["all_bank"]
@@ -135,8 +135,12 @@ class SERPostProcessing:
                 continue
 
             texts[field] = res["transcription"]
+            if field == "transfer_money":
+                range_check = 2
+            else:
+                range_check = 3
             # two line
-            for i in range(1, self.range_check):
+            for i in range(1, range_check):
                 idx_2 = idx + i
 
                 if idx_2 >= len(model_res):
