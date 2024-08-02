@@ -22,58 +22,37 @@ def decrypt(source_key: str, data: bytes):
 
 
 class DataDefine:
-    # def __init__(self, data: dict) -> None:
-    #     # self.file_size: int | None = data.get("file_size")
-    #     self.url: str = data.get("url")
-    #     self.source_key: str = data.get("source_key")
-    #     self.download_img
-    #     self.bank_code: str = data.get("bank_code")
-    #     self.bank_name: str = data.get("bank_name")
-    #     self.check_camera: int = data.get("check_camera")
-    #     self.order_amount: float = data.get("order_amount")
-    #     self.order_no: str = data.get("order_no")
-    #     self.site_name: str = data.get("site_name")
-    #     self.user_name: str = data.get("user_name")
-    #     self.device_source: str = data.get("device_source")
-    #     self.device_no: str = data.get("device_no")
-
-    #     self.order_create_time: str = data.get("order_create_time")
-    #     self.order_confirm_time: str = data.get("order_confirm_time")
-
-    #     self.ocr_res = data.get("ocr_origin_strange_font")
-    #     self.text_bill = data.get("textByLine_new")
-
-    #     self.text_info = {}
-    #     self.bb_info = {}
-    #     self.kie_re = []
-        
-    def __init__(self, data: dict) -> None:
+    def __init__(self, data: dict, mode = 'db') -> None:
         # self.file_size: int | None = data.get("file_size")
-        self.url: str = None
-        self.source_key: str = None
-
+        self.url: str = data.get("url")
+        self.source_key: str = data.get("source_key")
+        
         self.bank_code: str = data.get("bank_code")
-        self.bank_name: str = None
-        self.check_camera: int = None
-        self.order_amount: float = None
+        self.bank_name: str = data.get("bank_name")
+        self.check_camera: int = data.get("check_camera")
+        self.order_amount: float = data.get("order_amount")
         self.order_no: str = data.get("order_no")
-        self.site_name: str = None
-        self.user_name: str = None
-        self.device_source: str = None
-        self.device_no: str = None
+        self.site_name: str = data.get("site_name")
+        self.user_name: str = data.get("user_name")
+        self.device_source: str = data.get("device_source")
+        self.device_no: str = data.get("device_no")
 
-        self.order_create_time: str = None
-        self.order_confirm_time: str = None
+        self.order_create_time: str = data.get("order_create_time")
+        self.order_confirm_time: str = data.get("order_confirm_time")
 
-        self.ocr_res = []
-        self.text_bill = None
+        self.ocr_res = data.get("ocr_origin_strange_font", [])
+        self.text_bill = data.get("textByLine_new")
 
         self.text_info = {}
         self.bb_info = {}
         self.kie_re = []
 
-        self.bytes_img = None
-        self.img_nd = data.get("img_nd")
+        if mode == 'db':
+            self.download_img
+        elif mode == 'folder':
+            self.bytes_img = None
+            self.img_nd = data.get("img_nd")
+        
 
         
     @property

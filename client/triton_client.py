@@ -60,8 +60,8 @@ class KieClient:
         #         'kie_re': data.key_value
         #     }
         # )
-        # print(data.kie_ser)
-        # print(data.kie_re)
+        print(data.kie_ser)
+        print(data.kie_re)
         
 
         return data.order_no, data.kie_ser, data.kie_re, img_draw_ser, img_draw_re
@@ -82,7 +82,7 @@ def call_api(filename):
                 'bank_code': bank_code,
                 'order_no': order_no,
             }
-            info = DataDefine(data)
+            info = DataDefine(data, mode='folder')
             order_no, kie_ser, kie_re, img_draw_ser, img_draw_re = client_kie(info, True)
 
             # Save img
@@ -109,60 +109,61 @@ def call_api(filename):
 
 
 if __name__ == "__main__":
-    # import cv2
-    # import requests
-    # import time
-    # from pymongo import MongoClient
-
-    # # Load txt file
-    # file_path = '../zz[IN]_order_no.txt'
-    # with open(file_path, 'r') as file:
-    #     lines = [line.strip() for line in file.readlines()]
-    # order_no_lines = lines
-    # # print(order_no_lines)
-
-    # # Query
-    # client = MongoClient(
-    #     "mongodb://admin:92F767B6302F76A799A75447006AA59A@16.163.245.213:27017",
-    #     serverSelectionTimeoutMS=5000,
-    # )
-    # db = client["ai-team"]
-    # collection = db["classify_ocr"]
-
-    # query = {
-    #     "order_no": {"$in": order_no_lines},
-    # }
-    # sort_order = [("_id", -1)]
-    # projection = {}
-
-    # order_list_dest = list(
-    #     collection.find(query, projection).sort(sort_order).limit(10)
-    # )
-
-    # client_kie = KieClient(config_path="cfg/mongo.yaml")
-
-    # for item in order_list_dest:
-    #     info = DataDefine(item)
-
-    #     client_kie(info, True)
-
-
-
+    # Way 1: Run from DB
     import cv2
-    import os
-    import json
+    import requests
+    import time
+    from pymongo import MongoClient
 
-    bank_code = '243020'
-    folder_path = '/home/shaun/Music/hiro/image_zfbv2/image/real_1'
+    # Load txt file
+    file_path = '../zz[IN]_order_no.txt'
+    with open(file_path, 'r') as file:
+        lines = [line.strip() for line in file.readlines()]
+    order_no_lines = lines
+    # print(order_no_lines)
 
-    ouput_path = f'{folder_path}_[ser_re]'
-    os.makedirs(ouput_path, exist_ok=True)
-    json_output_path = f'{folder_path}_[json]'
-    os.makedirs(json_output_path, exist_ok=True)
+    # Query
+    client = MongoClient(
+        "mongodb://admin:92F767B6302F76A799A75447006AA59A@16.163.245.213:27017",
+        serverSelectionTimeoutMS=5000,
+    )
+    db = client["ai-team"]
+    collection = db["classify_ocr"]
 
-    client_kie = KieClient(config_path="cfg/mongo.yaml")  
+    query = {
+        "order_no": {"$in": order_no_lines},
+    }
+    sort_order = [("_id", -1)]
+    projection = {}
 
-    from concurrent.futures import ThreadPoolExecutor
+    order_list_dest = list(
+        collection.find(query, projection).sort(sort_order).limit(10)
+    )
 
-    with ThreadPoolExecutor(max_workers=20) as ex:
-        [ex.submit(call_api, filename) for filename in os.listdir(folder_path)]
+    client_kie = KieClient(config_path="cfg/mongo.yaml")
+
+    for item in order_list_dest:
+        info = DataDefine(item, mode = 'db')
+
+        client_kie(info, True)
+
+
+    # # Way 2: Run from folder
+    # import cv2
+    # import os
+    # import json
+
+    # bank_code = '243020'
+    # folder_path = '/home/shaun/Music/hiro/test/243020_1'
+
+    # ouput_path = f'{folder_path}_[ser_re]'
+    # os.makedirs(ouput_path, exist_ok=True)
+    # json_output_path = f'{folder_path}_[json]'
+    # os.makedirs(json_output_path, exist_ok=True)
+
+    # client_kie = KieClient(config_path="cfg/mongo.yaml")  
+
+    # from concurrent.futures import ThreadPoolExecutor
+
+    # with ThreadPoolExecutor(max_workers=20) as ex:
+    #     [ex.submit(call_api, filename) for filename in os.listdir(folder_path)]
