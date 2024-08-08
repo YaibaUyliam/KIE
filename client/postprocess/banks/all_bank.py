@@ -233,7 +233,7 @@ def format_time(text: str):
     # 2024年8月2日01:17:27 2024年7月17日 10:37:06
     if "日" in text:
         day_index = text.find("日") + 1
-        if day_index > 0 and text[day_index] != " ":
+        if day_index > 0 and day_index < len(text) and text[day_index] != " ":
             text = text[:day_index] + " " + text[day_index:]
 
     # 2024年01月14
@@ -245,11 +245,13 @@ def format_time(text: str):
         text = text[:10] + " " + text[10:]
 
     if len(text) not in [8, 10, 11, 16, 18, 19]:
-        text = None
+        return None
 
-    if text is not None and "/" in text:
-        text[4] = "/"
-        text[7] = "/"
+    if "/" in text:
+        text_list = list(text)
+        text_list[4] = "/"
+        text_list[7] = "/"
+        text = "".join(text_list)
 
     return text.strip()
 

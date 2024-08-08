@@ -5,13 +5,13 @@ import os
 import pickle
 
 from pytriton.client import ModelClient
+from pymongo import MongoClient
 
 from preprocess import rm_hidden_letter, rm_stamp
 from postprocess import SERPostProcessing, REPostProcessing
 from utils.data_define import DataDefine
 from utils.mongo import Mongo
 from utils.visual import draw_ser_results, draw_re_results
-
 
 
 def infer(img: np.ndarray, ocr_res: list, des="kie_server"):
@@ -25,86 +25,87 @@ def infer(img: np.ndarray, ocr_res: list, des="kie_server"):
 
 
 class KieClient:
-    def __init__(self, config_path: str) -> None:
+    def __init__(self, connection_string: str = None) -> None:
         self.ser_postprocess = SERPostProcessing()
         self.re_postprocess = REPostProcessing()
-    
-        # connection_string = "mongodb://admin:92F767B6302F76A799A75447006AA59A@16.163.245.213:27017/ai-team"
-        # client = MongoClient(connection_string)
-        # db = client['ai-team']
-        # self.collection = db[f'kie']
 
-    def __call__(self, data: DataDefine, test_env: bool) -> None:
-        img = data.img_nd
+        self.connection_string = connection_string
+        if self.connection_string:
+            client = MongoClient(connection_string)
+            mydb = client["kie"]
+            self.mycol = mydb["money_add"]
 
-        res_server = infer(img, data.ocr_res, '0.0.0.0')
+    def __call__(self, data: DataDefine) -> None:
+        # Preprocessing image
+        if data.bank_code in ["101010", "113010"] and data.check_camera == 0:
+            img = rm_hidden_letter(data.img_nd)
+        elif data.bank_code in ["158010"] and data.check_camera == 0:
+            img = rm_stamp(data.img_nd)
+        else:
+            img = data.img_nd
+
+        res_server = infer(img, data.ocr_res, os.environ.get("IP_DEST"))
         ser_res = json.loads(res_server["ser_res"])
         re_res = json.loads(res_server["re_res"])
 
-        # Draw
-        img_draw_ser, img_draw_re = None, None
-        if ser_res is not None:
-            img_draw_ser = draw_ser_results(img, ser_res[0], font_path="fonts/simfang.ttf")
-        if re_res is not None:
-            img_draw_re = draw_re_results(img, re_res[0], font_path="fonts/simfang.ttf")
-
-        # postprocess
         data.text_info, data.bb_info = self.ser_postprocess(
             ser_res[0], data.bank_code, img, data.text_bill
         )
-        data.kie_re = self.re_postprocess(re_res, img)
+        if re_res:
+            data.key_value = self.re_postprocess(re_res, img)
 
-        # self.collection.insert_one(
-        #     {
-        #         'kie_ser': data.info_save_db,
-        #         'kie_re': data.key_value
-        #     }
-        # )
-        print(data.kie_ser)
-        print(data.kie_re)
-        
+        if self.connection_string:
+            self.mycol.insert_one(document=data.info_save_db)
 
-        return data.order_no, data.kie_ser, data.kie_re, img_draw_ser, img_draw_re
+        return
+        # return data.info_cls_ocr, data.info_save_db, data.key_value
+
 
 def call_api(filename):
     try:
-        if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.tiff', '.bmp', '.gif')):
-            order_no = filename.split('_')[0] if '_' in filename else filename.split('.')[0]
+        if filename.lower().endswith(
+            (".png", ".jpg", ".jpeg", ".tiff", ".bmp", ".gif")
+        ):
+            order_no = (
+                filename.split("_")[0] if "_" in filename else filename.split(".")[0]
+            )
 
-            if os.path.exists(f'{ouput_path}/{order_no}.jpg'):
+            if os.path.exists(f"{ouput_path}/{order_no}.jpg"):
                 return
 
             img_path = os.path.join(folder_path, filename)
             img = cv2.imread(img_path)
 
             data = {
-                'img_nd': img,
-                'bank_code': bank_code,
-                'order_no': order_no,
+                "img_nd": img,
+                "bank_code": bank_code,
+                "order_no": order_no,
             }
-            info = DataDefine(data, mode='folder')
-            order_no, kie_ser, kie_re, img_draw_ser, img_draw_re = client_kie(info, True)
+            info = DataDefine(data, mode="folder")
+            order_no, kie_ser, kie_re, img_draw_ser, img_draw_re = client_kie(
+                info, True
+            )
 
             # Save img
             image1 = img_draw_ser if img_draw_ser is not None else img
             image2 = img_draw_re if img_draw_re is not None else img
             merged_image = cv2.hconcat([image2, image1])
-            cv2.imwrite(f'{ouput_path}/{order_no}.jpg', merged_image)
+            cv2.imwrite(f"{ouput_path}/{order_no}.jpg", merged_image)
 
-
-            # Save txt 
+            # Save txt
             output_dict = {
-                'order_no': order_no,
-                'bank_code': bank_code,
-                'kie_ser': kie_ser,
-                'kie_re': kie_re,
+                "order_no": order_no,
+                "bank_code": bank_code,
+                "kie_ser": kie_ser,
+                "kie_re": kie_re,
             }
-            base_name = filename.split('.')[0]
-            json_file_path = f'{json_output_path}/{base_name}.json'
-            with open(json_file_path, 'w', encoding='utf-8') as file:
+            base_name = filename.split(".")[0]
+            json_file_path = f"{json_output_path}/{base_name}.json"
+            with open(json_file_path, "w", encoding="utf-8") as file:
                 json.dump(output_dict, file, indent=4, ensure_ascii=False)
     except:
         import traceback
+
         print(traceback.format_exc())
 
 
@@ -116,8 +117,8 @@ if __name__ == "__main__":
     from pymongo import MongoClient
 
     # Load txt file
-    file_path = '../zz[IN]_order_no.txt'
-    with open(file_path, 'r') as file:
+    file_path = "../zz[IN]_order_no.txt"
+    with open(file_path, "r") as file:
         lines = [line.strip() for line in file.readlines()]
     order_no_lines = lines
     # print(order_no_lines)
@@ -143,10 +144,9 @@ if __name__ == "__main__":
     client_kie = KieClient(config_path="cfg/mongo.yaml")
 
     for item in order_list_dest:
-        info = DataDefine(item, mode = 'db')
+        info = DataDefine(item, mode="db")
 
         client_kie(info, True)
-
 
     # # Way 2: Run from folder
     # import cv2
@@ -161,7 +161,7 @@ if __name__ == "__main__":
     # json_output_path = f'{folder_path}_[json]'
     # os.makedirs(json_output_path, exist_ok=True)
 
-    # client_kie = KieClient(config_path="cfg/mongo.yaml")  
+    # client_kie = KieClient(config_path="cfg/mongo.yaml")
 
     # from concurrent.futures import ThreadPoolExecutor
 

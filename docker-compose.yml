@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   server:
-    image: yaibawiliam/kie_server:v3.1.5
+    image: yaibawiliam/kie_server:v4.2.7
     ports:
       - "8000:8000"
       - "8001:8001"
@@ -26,18 +26,27 @@ services:
           #   - driver: nvidia
           #     device_ids: ['0']
           #     capabilities: [gpu]
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 3
+        window: 20s
     networks:
       - network1
 
   client:
-    image: yaibawiliam/kie_client:v1.1.10
+    image: yaibawiliam/kie_client:v2.2.4
     # container_name: kie_client # not support
     # depends_on:
     #   - kie_server
     environment:
       IP_DEST: kie_server
-    ports:
-      - "5003:5003"
+      URL_DB: mongodb://admin:92F767B6302F76A799A75447006AA59A@16.163.245.213:27017
+      PROCESS: 3
+      KAFKA: 43.198.68.123:9092,43.198.68.123:9093,43.198.68.123:9094
+      GROUP_ID: zzz-aish-1
+    # ports:
+    #   - "5003:5003"
     networks:
       - network1
 

@@ -22,11 +22,18 @@ def decrypt(source_key: str, data: bytes):
 
 
 class DataDefine:
-    def __init__(self, data: dict, mode = 'db') -> None:
+    def __init__(self, data: dict, mode="db") -> None:
         # self.file_size: int | None = data.get("file_size")
+
         self.url: str = data.get("url")
+        # server save img change domain
+        if "postatic.mbrkrxw0.com" in self.url:
+            self.url = self.url.replace("https://postatic.mbrkrxw0.com", "https://d3kfcxg6897gl8.cloudfront.net")  # fmt: skip
+        elif "https://pastatic.3yr32880.com" in self.url:
+            self.url = self.url.replace("https://pastatic.3yr32880.com", "https://d7e6cqjokq51y.cloudfront.net")  # fmt: skip
+
         self.source_key: str = data.get("source_key")
-        
+
         self.bank_code: str = data.get("bank_code")
         self.bank_name: str = data.get("bank_name")
         self.check_camera: int = data.get("check_camera")
@@ -45,16 +52,14 @@ class DataDefine:
 
         self.text_info = {}
         self.bb_info = {}
-        self.kie_re = []
+        self.key_value = []
 
-        if mode == 'db':
+        if mode == "db":
             self.download_img
-        elif mode == 'folder':
+        elif mode == "folder":
             self.bytes_img = None
             self.img_nd = data.get("img_nd")
-        
 
-        
     @property
     def download_img(self):
         if self.url:
@@ -124,7 +129,7 @@ class DataDefine:
             "serial_loc": self.bb_info.get("serial_number_value"),
             "others_serial": self.text_info.get("others_serial_number_value"),
             "others_serial_loc": self.bb_info.get("others_serial_number_value"),
-            "key_value": self.kie_re,
+            "key_value": self.key_value,
         }
 
     @property
@@ -143,7 +148,6 @@ class DataDefine:
             "seri_number": self.text_info.get("serial_number_value"),
             "others_serial": self.text_info.get("others_serial_number_value"),
         }
-    
 
     @property
     def kie_ser(self):
