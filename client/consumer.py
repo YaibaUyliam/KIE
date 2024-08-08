@@ -17,15 +17,14 @@ from triton_client import KieClient  # , YoloClient
 
 config = load_dotenv()
 test_env = os.environ["TEST_ENV"].lower() == "true"
-print(test_env)
 
-if test_env is False:
-    filename = "log/record_bill_info.log"
-else:
-    filename = "log/record_bill_info_test.log"
+# if test_env is False:
+#     filename = "log/record_bill_info.log"
+# else:
+#     filename = "log/record_bill_info_test.log"
 
 logging.basicConfig(
-    filename=filename,
+    # filename=filename,
     level=logging.INFO,
     format=f"%(asctime)s %(levelname)s %(name)s : %(message)s",
 )
@@ -34,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 class BillInfo:
     def __init__(self):
-        logging.info("Starting ....")
+        logger.info("Starting ....")
 
         self.process = int(os.environ["PROCESS"])
         self.pool = ThreadPool(self.process)
@@ -50,10 +49,11 @@ class BillInfo:
 
         self.consumer.subscribe(["classify_ocr"])
 
-        with open("cfg/bank_get_info.yaml") as f:
-            self.bank_run = yaml.load(f, Loader=yaml.FullLoader)
+        connection_db = os.environ["URL_DB"]
+        # with open("cfg/bank_get_info.yaml") as f:
+        #     self.bank_run = yaml.load(f, Loader=yaml.FullLoader)
 
-        self.client_kie = KieClient(config_path="cfg/mongo.yaml")
+        self.client_kie = KieClient(connection_db)
 
     def run(self):
         while True:
@@ -64,23 +64,23 @@ class BillInfo:
                 for _, items in data.items():
                     for item in items:
                         item = item.value
-                        info = DataDefine(item)
-
-                        if item["bank_code"] not in self.bank_run:
+                        if item["bank_code"] == "C000":
                             continue
 
+                        info = DataDefine(item)
+
                         if info.img_nd is not None:
-                            self.client_kie(info, test_env)
+                            self.client_kie(info)
 
                 if self.stop_event.is_set():
                     return
 
             except Exception as e:
-                logging.error(e)
-                logging.error(type(e).__name__)
-                logging.error(traceback.format_exc())
-                logging.error(item["url"])
-                logging.error(item["order_no"])
+                logger.error(e)
+                logger.error(type(e).__name__)
+                logger.error(traceback.format_exc())
+                logger.error(item["url"])
+                logger.error(item["order_no"])
 
     def start(self):
         for _ in range(self.process):
@@ -99,7 +99,7 @@ def signal_handler(sig, frame):
     bi.pool.join()
 
     print("All threads are done. Exiting.")
-    logging.info("All threads are done. Exiting.")
+    logger.info("All threads are done. Exiting.")
 
 
 if __name__ == "__main__":
