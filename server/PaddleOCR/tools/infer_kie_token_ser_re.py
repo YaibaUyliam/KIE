@@ -149,11 +149,11 @@ class SerRePredictor(object):
         if self.model.backbone.use_visual_backbone is False:
             re_input.pop(4)
         preds = self.model(re_input)
-        post_result = self.post_process_class(
+        re_post_result = self.post_process_class(
             preds,
             ser_results=ser_results,
             entity_idx_dict_batch=entity_idx_dict_batch)
-        return post_result
+        return re_post_result, ser_results
 
 
 def preprocess():

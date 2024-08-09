@@ -68,7 +68,7 @@ class _InferFuncWrapper:
                 data["ocr_info"] = convert(ocr[0])
 
             ser_res, _ = self._ser_model(data.copy())
-            re_res = self._re_model(data.copy())
+            re_res, ser_res_other = self._re_model(data.copy())
 
         except Exception as e:
             logger.error(e)
@@ -85,6 +85,7 @@ class _InferFuncWrapper:
         return {
             "ser_res": np.array([json.dumps(ser_res, default=convert_to_python_float)]),
             "re_res": np.array([json.dumps(re_res)]),
+            "ser_res_other": np.array([json.dumps(ser_res_other)]),
         }
 
 
@@ -138,6 +139,7 @@ def main():
             outputs=[
                 Tensor(name="ser_res", dtype=bytes, shape=(-1,)),
                 Tensor(name="re_res", dtype=bytes, shape=(-1,)),
+                Tensor(name="ser_res_other", dtype=bytes, shape=(-1,)),
             ],
             config=ModelConfig(
                 max_batch_size=1,

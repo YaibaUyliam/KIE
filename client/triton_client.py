@@ -8,7 +8,7 @@ from pytriton.client import ModelClient
 from pymongo import MongoClient
 
 from preprocess import rm_hidden_letter, rm_stamp
-from postprocess import SERPostProcessing, REPostProcessing
+from postprocess import SERPostProcessing, REPostProcessing, SEROtherPostProcessing
 from utils.data_define import DataDefine
 from utils.mongo import Mongo
 from utils.visual import draw_ser_results, draw_re_results
@@ -28,6 +28,7 @@ class KieClient:
     def __init__(self, connection_string: str = None) -> None:
         self.ser_postprocess = SERPostProcessing()
         self.re_postprocess = REPostProcessing()
+        self.ser_other_postprocess = SEROtherPostProcessing()
 
         self.connection_string = connection_string
         if self.connection_string:
@@ -47,18 +48,19 @@ class KieClient:
         res_server = infer(img, data.ocr_res, os.environ.get("IP_DEST"))
         ser_res = json.loads(res_server["ser_res"])
         re_res = json.loads(res_server["re_res"])
+        ser_res_other = json.loads(res_server["ser_res_other"])
 
         data.text_info, data.bb_info = self.ser_postprocess(
             ser_res[0], data.bank_code, img, data.text_bill
         )
         if re_res:
             data.key_value = self.re_postprocess(re_res, img)
+            data.ser_other = self.ser_other_postprocess(ser_res_other, img)
 
         if self.connection_string:
             self.mycol.insert_one(document=data.info_save_db)
 
-        return
-        # return data.info_cls_ocr, data.info_save_db, data.key_value
+        return data.info_cls_ocr, data.info_save_db, data.key_value, data.ser_other
 
 
 def call_api(filename):

@@ -1,2 +1,3 @@
 from .ser_postprocess import SERPostProcessing
 from .re_postprocess import REPostProcessing
+from .ser_other_postprocess import SEROtherPostProcessing

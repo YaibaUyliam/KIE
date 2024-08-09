@@ -53,6 +53,7 @@ class DataDefine:
         self.text_info = {}
         self.bb_info = {}
         self.key_value = []
+        self.ser_other = {}
 
         if mode == "db":
             self.download_img
