@@ -62,7 +62,7 @@ class ReArgsParser(ArgsParser):
 
 
 def make_input(ser_inputs, ser_results):
-    entities_labels = {'HEADER': 0, 'QUESTION': 1, 'ANSWER': 2}
+    entities_labels = {'HEADER': 0, 'QUESTION': 1, 'ANSWER': 2, 'TIME': 3, 'TIME_TRANS': 4, 'SERI': 5, 'MONEY': 6, 'BUTTON': 7, 'STK':8, 'CONFIRM': 9, 'NOTE1':10, 'NOTE2':11}
     batch_size, max_seq_len = ser_inputs[0].shape[:2]
     entities = ser_inputs[8][0]
     ser_results = ser_results[0]

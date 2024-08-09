@@ -53,11 +53,10 @@ class VQAReTokenChunk(object):
                  infer_mode=False,
                  **kwargs):
         self.max_seq_len = max_seq_len
-        self.entities_labels = {
-            'HEADER': 0,
-            'QUESTION': 1,
-            'ANSWER': 2
-        } if entities_labels is None else entities_labels
+        self.entities_labels = (
+            {'HEADER': 0, 'QUESTION': 1, 'ANSWER': 2, 'TIME': 3, 'TIME_TRANS': 4, 'SERI': 5, 'MONEY': 6, 'BUTTON': 7, 'STK':8, 'CONFIRM': 9, 'NOTE1':10, 'NOTE2':11}
+            if entities_labels is None else entities_labels
+        )
         self.infer_mode = infer_mode
 
     def __call__(self, data):
