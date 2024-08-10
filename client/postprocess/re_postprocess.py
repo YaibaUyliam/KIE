@@ -49,6 +49,8 @@ class REPostProcessing:
                 elif element['pred'] == 'ANSWER':
                     couple['value']= [txt, bbox]
             couples.append(couple)
+        if not couples:
+            return []
 
         # s2
         couples[0]['id'] = 0

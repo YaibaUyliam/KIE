@@ -137,20 +137,26 @@ if __name__ == "__main__":
 
     query = {
         "order_no": {"$in": order_no_lines},
+        # 'bank_code': '101010',
     }
     sort_order = [("_id", -1)]
     projection = {}
 
     order_list_dest = list(
-        collection.find(query, projection).sort(sort_order).limit(10)
+        collection.find(query, projection).sort(sort_order).limit(1000)
     )
 
     client_kie = KieClient()
 
     for item in order_list_dest:
-        info = DataDefine(item, mode="db")
+        try:
+            info = DataDefine(item, mode="db")
 
-        client_kie(info)
+            client_kie(info)
+        except:
+            import traceback
+            print(traceback.format_exc())
+            print(item["order_no"])
 
     # # Way 2: Run from folder
     # import cv2
