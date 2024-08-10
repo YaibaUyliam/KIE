@@ -12,7 +12,9 @@ from postprocess import SERPostProcessing, REPostProcessing, SEROtherPostProcess
 from utils.data_define import DataDefine
 from utils.mongo import Mongo
 from utils.visual import draw_ser_results, draw_re_results
+from dotenv import load_dotenv
 
+load_dotenv()
 
 def infer(img: np.ndarray, ocr_res: list, des="kie_server"):
     with ModelClient(des, "KIE", init_timeout_s=80) as client:
@@ -143,12 +145,12 @@ if __name__ == "__main__":
         collection.find(query, projection).sort(sort_order).limit(10)
     )
 
-    client_kie = KieClient(config_path="cfg/mongo.yaml")
+    client_kie = KieClient()
 
     for item in order_list_dest:
         info = DataDefine(item, mode="db")
 
-        client_kie(info, True)
+        client_kie(info)
 
     # # Way 2: Run from folder
     # import cv2

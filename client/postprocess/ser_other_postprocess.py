@@ -36,7 +36,7 @@ class SEROtherPostProcessing:
             txt = key_value['transcription']
             if key_value['pred'] in labels:
                 bbox = key_value['bbox']
-                bbox = fit_bbox_2(image, bbox)
+                bbox = fit_bbox_2(image, bbox, type='xyxy')
                 
                 key = key_value['pred'].lower()
                 ser_other[key] = txt
