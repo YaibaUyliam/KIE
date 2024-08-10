@@ -17,7 +17,7 @@ import numpy as np
 from pytriton.client import ModelClient
 from pymongo import MongoClient
 
-from postprocess import SERPostProcessing
+from postprocess import SERPostProcessing, SEROtherPostProcessing
 from utils.visual import draw_ser_results, draw_re_results
 
 
@@ -79,6 +79,7 @@ def base64_to_cv2(base64_string):
 
 
 ser_postprocess = SERPostProcessing()
+ser_other_postprocess = SEROtherPostProcessing()
 base_head = "data:image/jpeg;base64,"
 
 
@@ -98,7 +99,7 @@ def ser_re_visual():
             data = request.json
             url = data["url"]
             # will query db in future
-            logging.info(url)
+            logger.info(url)
 
             if "data:image" in url:
                 img = base64_to_cv2(url)
@@ -119,20 +120,28 @@ def ser_re_visual():
                 else:
                     query = {"url": url}
                     order_list = list(collection.find(query, projection))[0]
-                    logging.info("Time query DB: %s", time.time() - time_s)
+                    logger.info("Time query DB: %s", time.time() - time_s)
 
                 ocr = order_list.get("ocr_origin_strange_font", [])
                 text_only = order_list.get("text_by_line_strange_font")
 
         else:
-            return {"img_ser": None, "img_ser_post": None, "img_re": None}
+            return {
+                "img_ser": None,
+                "img_ser_post": None,
+                "img_re": None,
+                "img_ser_other": None,
+            }
 
         time_s = time.time()
         model_res = infer(img, ocr, os.environ.get("IP_DEST"))
-        logging.info("Time model infer: %s", time.time() - time_s)
+        logger.info("Time model infer: %s", time.time() - time_s)
 
         ser_res = json.loads(model_res["ser_res"])
         re_res = json.loads(model_res["re_res"])
+        ser_res_other = json.loads(model_res["ser_res_other"])
+
+        ser_res_other = ser_other_postprocess(ser_res_other, img)
 
         img_ser_res = None
         ser_res_post = None
@@ -153,6 +162,7 @@ def ser_re_visual():
                 "img_ser": img_ser_res,
                 "img_ser_post": ser_res_post,
                 "img_re": img_re_res,
+                "img_ser_other": ser_res_other,
             }
         )
 
@@ -161,7 +171,12 @@ def ser_re_visual():
         logger.error(type(e).__name__)
         logger.error(traceback.format_exc())
 
-        return {"img_ser": None, "img_ser_post": None, "img_re": None}
+        return {
+            "img_ser": None,
+            "img_ser_post": None,
+            "img_re": None,
+            "img_ser_other": None,
+        }
 
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   server:
-    image: yaibawiliam/kie_server:v4.2.7
+    image: yaibawiliam/kie_server:v4.3.5.test
     ports:
       - "8000:8000"
       - "8001:8001"
@@ -35,7 +35,7 @@ services:
       - network1
 
   client:
-    image: yaibawiliam/kie_client:v2.2.4
+    image: yaibawiliam/kie_client:v2.2.18.test
     # container_name: kie_client # not support
     # depends_on:
     #   - kie_server
@@ -45,8 +45,8 @@ services:
       PROCESS: 3
       KAFKA: 43.198.68.123:9092,43.198.68.123:9093,43.198.68.123:9094
       GROUP_ID: zzz-aish-1
-    # ports:
-    #   - "5003:5003"
+    ports:
+      - "5003:5003"
     networks:
       - network1
 
