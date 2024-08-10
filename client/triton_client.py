@@ -6,15 +6,15 @@ import pickle
 
 from pytriton.client import ModelClient
 from pymongo import MongoClient
+from dotenv import load_dotenv
 
 from preprocess import rm_hidden_letter, rm_stamp
 from postprocess import SERPostProcessing, REPostProcessing, SEROtherPostProcessing
 from utils.data_define import DataDefine
-from utils.mongo import Mongo
-from utils.visual import draw_ser_results, draw_re_results
-from dotenv import load_dotenv
+
 
 load_dotenv()
+
 
 def infer(img: np.ndarray, ocr_res: list, des="kie_server"):
     with ModelClient(des, "KIE", init_timeout_s=80) as client:

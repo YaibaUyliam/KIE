@@ -54,6 +54,7 @@ class _InferFuncWrapper:
         time_s = time.time()
         ser_res = None
         re_res = None
+        ser_res_other = None
 
         try:
             data = {}
