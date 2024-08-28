@@ -33,10 +33,10 @@ Architecture:
   Backbone:
     name: LayoutXLMForSer
     pretrained: True
-    checkpoints: ckpts/ser_vi_layoutxlm_0107/best_model
+    checkpoints: ckpts/ser_vi_layoutxlm_2308/best_model
     # one of base or vi
     mode: vi
-    num_classes: &num_classes 27
+    num_classes: &num_classes 33
 
 Loss:
   name: VQASerTokenLayoutLMLoss

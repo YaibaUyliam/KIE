@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 import os
 import pickle
 from loguru import logger
+import subprocess
 
 from pytriton.model_config import ModelConfig, Tensor
 from pytriton.triton import Triton, TritonConfig
@@ -48,6 +49,10 @@ class _InferFuncWrapper:
         self._re_model = re_model
         self._device = device
 
+        output = subprocess.check_output(["nvidia-smi"])
+        output = output.decode("utf-8")
+        logger.info(output)
+
     # @fill_optionals(get_info=np.array([False], dtype=np.int8))
     @batch
     def __call__(self, image: np.ndarray, ocr: np.object_) -> dict:
@@ -56,31 +61,32 @@ class _InferFuncWrapper:
         re_res = None
         ser_res_other = None
 
-        try:
-            data = {}
-            data["image"] = image[0]
-            logger.info(data["image"].shape)
+        if len(ocr) != 0:
+            try:
+                data = {}
+                data["image"] = image[0]
+                logger.info(data["image"].shape)
 
-            ocr = pickle.loads(ocr[0][0])
-            if len(ocr) == 0:
-                logger.warning("Using PaddleOcr !!!")
-                data["ocr_info"] = run_ocr(cfg_ser["Global"], image[0])
-            else:
+                ocr = pickle.loads(ocr[0][0])
                 data["ocr_info"] = convert(ocr[0])
 
-            ser_res, _ = self._ser_model(data.copy())
-            re_res, ser_res_other = self._re_model(data.copy())
+                ser_res, _ = self._ser_model(data.copy())
+                re_res, ser_res_other = self._re_model(data.copy())
 
-        except Exception as e:
-            logger.error(e)
-            logger.error(type(e).__name__)
-            logger.error(traceback.format_exc())
+            except Exception as e:
+                logger.error(e)
+                logger.error(type(e).__name__)
+                logger.error(traceback.format_exc())
 
-            if type(e).__name__ == "OSError":
-                raise PyTritonUnrecoverableError(
-                    "Some unrecoverable error occurred, "
-                    "thus no further inferences are possible."
-                ) from e
+                if type(e).__name__ == "OSError":
+                    output = subprocess.check_output(["nvidia-smi"])
+                    output = output.decode("utf-8")
+                    logger.info(output)
+
+                    raise PyTritonUnrecoverableError(
+                        "Some unrecoverable error occurred, "
+                        "thus no further inferences are possible."
+                    ) from e
 
         logger.info(time.time() - time_s)
         return {
