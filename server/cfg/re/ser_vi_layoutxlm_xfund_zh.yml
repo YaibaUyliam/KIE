@@ -30,7 +30,7 @@ Architecture:
   Backbone:
     name: LayoutXLMForSer
     pretrained: True
-    checkpoints: ckpts/ser_re_vi_layoutxlm_1608/best_model
+    checkpoints: ckpts/ser_re_vi_layoutxlm_2708/best_model
     # one of base or vi
     mode: vi
     num_classes: &num_classes 25

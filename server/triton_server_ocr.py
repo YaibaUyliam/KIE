@@ -9,14 +9,13 @@ from dotenv import load_dotenv
 import os
 import pickle
 from loguru import logger
-import subprocess
 
 from pytriton.model_config import ModelConfig, Tensor
 from pytriton.triton import Triton, TritonConfig
 from pytriton.decorators import batch  # , fill_optionals
 from pytriton.exceptions import PyTritonUnrecoverableError
 
-from ocr import run_ocr, convert
+from ocr import run_ocr, convert, OcrEngine
 from PaddleOCR.tools.infer_kie_token_ser import SerPredictorV2
 from PaddleOCR.tools.infer_kie_token_ser_re import SerRePredictor
 
@@ -43,8 +42,8 @@ def convert_to_python_float(obj):
 
 
 class _InferFuncWrapper:
-    def __init__(self, ser_model, re_model, device: str):
-        # self._ocr_model = ocr_model
+    def __init__(self, ocr_model, ser_model, re_model, device: str):
+        self._ocr_model = ocr_model
         self._ser_model = ser_model
         self._re_model = re_model
         self._device = device
@@ -57,32 +56,31 @@ class _InferFuncWrapper:
         re_res = None
         ser_res_other = None
 
-        if len(ocr) != 0:
-            try:
-                data = {}
-                data["image"] = image[0]
-                logger.info(data["image"].shape)
+        try:
+            data = {}
+            data["image"] = image[0]
+            logger.info(data["image"].shape)
 
-                ocr = pickle.loads(ocr[0][0])
+            ocr = pickle.loads(ocr[0][0])
+            if len(ocr) == 0:
+                logger.warning("Using PaddleOcr !!!")
+                data["ocr_info"] = self._ocr_model(data.copy())
+            else:
                 data["ocr_info"] = convert(ocr[0])
 
-                ser_res, _ = self._ser_model(data.copy())
-                re_res, ser_res_other = self._re_model(data.copy())
+            ser_res, _ = self._ser_model(data.copy())
+            re_res, ser_res_other = self._re_model(data.copy())
 
-            except Exception as e:
-                logger.error(e)
-                logger.error(type(e).__name__)
-                logger.error(traceback.format_exc())
+        except Exception as e:
+            logger.error(e)
+            logger.error(type(e).__name__)
+            logger.error(traceback.format_exc())
 
-                if type(e).__name__ == "OSError":
-                    output = subprocess.check_output(["nvidia-smi"])
-                    output = output.decode("utf-8")
-                    logger.info(output)
-
-                    raise PyTritonUnrecoverableError(
-                        "Some unrecoverable error occurred, "
-                        "thus no further inferences are possible."
-                    ) from e
+            if type(e).__name__ == "OSError":
+                raise PyTritonUnrecoverableError(
+                    "Some unrecoverable error occurred, "
+                    "thus no further inferences are possible."
+                ) from e
 
         logger.info(time.time() - time_s)
         return {
@@ -96,11 +94,11 @@ def _infer_function_factory(devices: List[str]):
     infer_funcs = []
 
     for device in devices:
-        # ocr_model = OcrEngine(cfg_ser["Global"])
+        ocr_model = OcrEngine(cfg_ser["Global"])
         ser_model = init_ser_model(cfg_ser)
         re_model = init_re_model(cfg_re, cfg_cer_for_re)
 
-        infer_funcs.append(_InferFuncWrapper(ser_model, re_model, device=device))
+        infer_funcs.append(_InferFuncWrapper(ocr_model, ser_model, re_model, device=device))
 
     return infer_funcs
 
