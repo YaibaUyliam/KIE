@@ -180,12 +180,32 @@ def create_predictor(args, mode, logger):
         sys.exit(0)
     if args.use_onnx:
         import onnxruntime as ort
+
         model_file_path = model_dir
         if not os.path.exists(model_file_path):
-            raise ValueError("not find model file path {}".format(
-                model_file_path))
-        sess = ort.InferenceSession(model_file_path)
-        return sess, sess.get_inputs()[0], None, None
+            raise ValueError("not find model file path {}".format(model_file_path))
+        if args.use_gpu:
+            logger.info("Use GPU -------------")
+            logger.info(ort.get_device())
+            # options = ort.SessionOptions()
+            # options.log_severity_level=1
+
+            sess = ort.InferenceSession(
+                model_file_path,
+                providers=[
+                    (
+                        "CUDAExecutionProvider",
+                        {"device_id": args.gpu_id, "cudnn_conv_algo_search": "DEFAULT"},
+                    )
+                ],
+                # sess_options=options
+            )
+        else:
+            sess = ort.InferenceSession(
+                model_file_path, providers=["CPUExecutionProvider"]
+            )
+
+        return sess, sess.get_inputs(), None, None
 
     else:
         file_names = ['model', 'inference']

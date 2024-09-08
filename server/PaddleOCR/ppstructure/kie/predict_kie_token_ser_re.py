@@ -24,6 +24,7 @@ import cv2
 import json
 import numpy as np
 import time
+import copy
 
 import tools.infer.utility as utility
 from tools.infer_kie_token_ser_re import make_input
@@ -38,22 +39,22 @@ logger = get_logger()
 
 
 class SerRePredictor(object):
-    def __init__(self, args):
-        self.use_visual_backbone = args.use_visual_backbone
-        self.ser_engine = SerPredictor(args)
-        if args.re_model_dir is not None:
-            postprocess_params = {'name': 'VQAReTokenLayoutLMPostProcess'}
-            self.postprocess_op = build_post_process(postprocess_params)
-            self.predictor, self.input_tensor, self.output_tensors, self.config = \
-                utility.create_predictor(args, 're', logger)
-        else:
-            self.predictor = None
+    def __init__(self, args, cfg_ser, cfg_re):
+        self.use_visual_backbone = False
+        self.ser_engine = SerPredictor(args, cfg_ser) # change value args
 
-    def __call__(self, img):
-        starttime = time.time()
-        ser_results, ser_inputs, ser_elapse = self.ser_engine(img)
+        args.use_onnx = False
+        args.re_model_dir = cfg_re["Architecture"]["Backbone"]["checkpoints"]
+
+        postprocess_params = {'name': 'VQAReTokenLayoutLMPostProcess'}
+        self.postprocess_op = build_post_process(postprocess_params)
+        self.predictor, self.input_tensor, self.output_tensors, self.config = \
+            utility.create_predictor(args, 're', logger)
+
+    def __call__(self, data: dict):
+        ser_results, ser_inputs = self.ser_engine(data)
         if self.predictor is None:
-            return ser_results, ser_elapse
+            return ser_results
 
         re_input, entity_idx_dict_batch = make_input(ser_inputs, ser_results)
         if self.use_visual_backbone == False:
@@ -71,13 +72,15 @@ class SerRePredictor(object):
             pred_relations=outputs[2],
             hidden_states=outputs[0], )
 
-        post_result = self.postprocess_op(
+        re_post_result = self.postprocess_op(
             preds,
             ser_results=ser_results,
             entity_idx_dict_batch=entity_idx_dict_batch)
 
-        elapse = time.time() - starttime
-        return post_result, elapse
+        self.predictor.try_shrink_memory()
+        # self.predictor.clear_intermediate_tensor()
+
+        return re_post_result, ser_results
 
 
 def main(args):

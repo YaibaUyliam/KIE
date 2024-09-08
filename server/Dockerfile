@@ -24,5 +24,6 @@ RUN python3 -m pip install -r requirements.txt
 COPY ckpts /venv/ckpts
 COPY ./server /venv
 RUN mv ./modeling.py /usr/local/lib/python3.10/dist-packages/paddlenlp/transformers/layoutxlm/modeling.py
+RUN mv ./triton.py /usr/local/lib/python3.10/dist-packages/pytriton/triton.py
 
 CMD ["python3", "triton_server.py"]

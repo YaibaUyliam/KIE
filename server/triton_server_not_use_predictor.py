@@ -16,22 +16,24 @@ from pytriton.triton import Triton, TritonConfig
 from pytriton.decorators import batch  # , fill_optionals
 from pytriton.exceptions import PyTritonUnrecoverableError
 
-from ocr import convert
-from PaddleOCR.ppstructure.kie.predict_kie_token_ser import SerPredictor
-from PaddleOCR.ppstructure.kie.predict_kie_token_ser_re import SerRePredictor
-from PaddleOCR.ppstructure.utility import parse_args
+from ocr import run_ocr, convert
+from PaddleOCR.tools.infer_kie_token_ser import SerPredictorV2
+from PaddleOCR.tools.infer_kie_token_ser_re import SerRePredictor
 
 
 load_dotenv()
-args = parse_args()
+
+cfg_ser = yaml.safe_load(open("cfg/ser/ser_vi_layoutxlm.yaml"))
+cfg_cer_for_re = yaml.safe_load(open("cfg/re/ser_vi_layoutxlm_xfund_zh.yml"))
+cfg_re = yaml.safe_load(open("cfg/re/re_vi_layoutxlm_xfund_zh.yml"))
 
 
 def init_ser_model(cfg):
-    return SerPredictor(args, cfg)
+    return SerPredictorV2(cfg)
 
 
-def init_re_model(cfg_re, cfg_ser):
-    return SerRePredictor(args, cfg_ser, cfg_re)
+def init_re_model(cfg, cfg_ser):
+    return SerRePredictor(cfg, cfg_ser)
 
 
 def convert_to_python_float(obj):
@@ -51,7 +53,6 @@ class _InferFuncWrapper:
     @batch
     def __call__(self, image: np.ndarray, ocr: np.object_) -> dict:
         time_s = time.time()
-
         ser_res = None
         re_res = None
         ser_res_other = None
@@ -60,7 +61,7 @@ class _InferFuncWrapper:
             try:
                 data = {}
                 data["image"] = image[0]
-                # logger.info(data["image"].shape)
+                logger.info(data["image"].shape)
 
                 ocr = pickle.loads(ocr[0][0])
                 data["ocr_info"] = convert(ocr[0])
@@ -95,9 +96,6 @@ def _infer_function_factory(devices: List[str]):
     infer_funcs = []
 
     for device in devices:
-        cfg_ser = yaml.safe_load(open("cfg/ser/ser_vi_layoutxlm.yaml"))
-        cfg_cer_for_re = yaml.safe_load(open("cfg/re/ser_vi_layoutxlm_xfund_zh.yml"))
-        cfg_re = yaml.safe_load(open("cfg/re/re_vi_layoutxlm_xfund_zh.yml"))
         # ocr_model = OcrEngine(cfg_ser["Global"])
         ser_model = init_ser_model(cfg_ser)
         re_model = init_re_model(cfg_re, cfg_cer_for_re)
@@ -108,7 +106,29 @@ def _infer_function_factory(devices: List[str]):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--max-batch-size",
+        type=int,
+        default=1,
+        help="Batch size of request.",
+        required=False,
+    )
+    parser.add_argument(
+        "--number-of-instances",
+        type=int,
+        default=2,
+        help="Batch size of request.",
+        required=False,
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        default=False,
+    )
+
     devices = ["cuda:0"] * int(os.environ["NUMBER_OF_INSTANCES"])
+    # devices = ["cuda:0", "cuda:0"]
 
     # with Triton(config=TritonConfig(log_verbose=3)) as triton:
     with Triton() as triton:
