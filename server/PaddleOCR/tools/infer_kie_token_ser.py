@@ -23,25 +23,31 @@ import sys
 
 __dir__ = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(__dir__)
-sys.path.insert(0, os.path.abspath(os.path.join(__dir__, '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(__dir__, "..")))
 
-os.environ["FLAGS_allocator_strategy"] = 'auto_growth'
+os.environ["FLAGS_allocator_strategy"] = "auto_growth"
 import cv2
 import json
 import paddle
+import time
 
 from ppocr.data import create_operators, transform
 from ppocr.modeling.architectures import build_model
 from ppocr.postprocess import build_post_process
 from ppocr.utils.save_load import load_model
-from ppocr.utils.visual import draw_ser_results
-from ppocr.utils.utility import get_image_file_list, load_vqa_bio_label_maps
-import tools.program as program
+
+# from ppocr.utils.visual import draw_ser_results
+# from ppocr.utils.utility import get_image_file_list, load_vqa_bio_label_maps
+# import tools.program as program
+from ppocr.utils.logging import get_logger
+
+logger = get_logger()
 
 
 def to_tensor(data):
     import numbers
     from collections import defaultdict
+
     data_dict = defaultdict(list)
     to_tensor_idxs = []
 
@@ -57,47 +63,56 @@ def to_tensor(data):
 
 class SerPredictor(object):
     def __init__(self, config):
-        global_config = config['Global']
-        self.algorithm = config['Architecture']["algorithm"]
+        global_config = config["Global"]
+        self.algorithm = config["Architecture"]["algorithm"]
 
         # build post process
-        self.post_process_class = build_post_process(config['PostProcess'],
-                                                     global_config)
+        self.post_process_class = build_post_process(
+            config["PostProcess"], global_config
+        )
 
         # build model
-        self.model = build_model(config['Architecture'])
+        self.model = build_model(config["Architecture"])
 
-        load_model(
-            config, self.model, model_type=config['Architecture']["model_type"])
+        load_model(config, self.model, model_type=config["Architecture"]["model_type"])
 
         from paddleocr import PaddleOCR
+
         self.ocr_engine = PaddleOCR(
             use_angle_cls=False,
             show_log=False,
             rec_model_dir=global_config.get("kie_rec_model_dir", None),
             det_model_dir=global_config.get("kie_det_model_dir", None),
             cls_model_dir=global_config.get("kie_cls_model_dir", None),
-            rec_char_dict_path = config.get("kie_char_dict_path", None),
-            use_gpu=global_config['use_gpu'])
+            rec_char_dict_path=config.get("kie_char_dict_path", None),
+            use_gpu=global_config["use_gpu"],
+        )
 
         # create data ops
         transforms = []
-        for op in config['Eval']['dataset']['transforms']:
+        for op in config["Eval"]["dataset"]["transforms"]:
             op_name = list(op)[0]
-            if 'Label' in op_name:
-                op[op_name]['ocr_engine'] = self.ocr_engine
-            elif op_name == 'KeepKeys':
-                op[op_name]['keep_keys'] = [
-                    'input_ids', 'bbox', 'attention_mask', 'token_type_ids',
-                    'image', 'labels', 'segment_offset_id', 'ocr_info',
-                    'entities'
+            if "Label" in op_name:
+                op[op_name]["ocr_engine"] = self.ocr_engine
+            elif op_name == "KeepKeys":
+                op[op_name]["keep_keys"] = [
+                    "input_ids",
+                    "bbox",
+                    "attention_mask",
+                    "token_type_ids",
+                    "image",
+                    "labels",
+                    "segment_offset_id",
+                    "ocr_info",
+                    "entities",
                 ]
 
             transforms.append(op)
         if config["Global"].get("infer_mode", None) is None:
-            global_config['infer_mode'] = True
-        self.ops = create_operators(config['Eval']['dataset']['transforms'],
-                                    global_config)
+            global_config["infer_mode"] = True
+        self.ops = create_operators(
+            config["Eval"]["dataset"]["transforms"], global_config
+        )
         self.model.eval()
 
     def __call__(self, data):
@@ -109,7 +124,8 @@ class SerPredictor(object):
         preds = self.model(batch)
 
         post_result = self.post_process_class(
-            preds, segment_offset_ids=batch[6], ocr_infos=batch[7])
+            preds, segment_offset_ids=batch[6], ocr_infos=batch[7]
+        )
 
         return post_result, batch
 
@@ -117,52 +133,68 @@ class SerPredictor(object):
 # This version not use OCR
 class SerPredictorV2(object):
     def __init__(self, config):
-        global_config = config['Global']
-        self.algorithm = config['Architecture']["algorithm"]
+        global_config = config["Global"]
+        self.algorithm = config["Architecture"]["algorithm"]
 
         # build post process
-        self.post_process_class = build_post_process(config['PostProcess'],
-                                                     global_config)
+        self.post_process_class = build_post_process(
+            config["PostProcess"], global_config
+        )
 
         # build model
-        self.model = build_model(config['Architecture'])
+        self.model = build_model(config["Architecture"])
 
-        load_model(
-            config, self.model, model_type=config['Architecture']["model_type"])
+        load_model(config, self.model, model_type=config["Architecture"]["model_type"])
 
         # create data ops
         transforms = []
-        for op in config['Eval']['dataset']['transforms']:
+        for op in config["Eval"]["dataset"]["transforms"]:
             op_name = list(op)[0]
-            if op_name == 'KeepKeys':
-                op[op_name]['keep_keys'] = [
-                    'input_ids', 'bbox', 'attention_mask', 'token_type_ids',
-                    'image', 'labels', 'segment_offset_id', 'ocr_info',
-                    'entities'
+            if op_name == "KeepKeys":
+                op[op_name]["keep_keys"] = [
+                    "input_ids",
+                    "bbox",
+                    "attention_mask",
+                    "token_type_ids",
+                    "image",
+                    "labels",
+                    "segment_offset_id",
+                    "ocr_info",
+                    "entities",
                 ]
 
             transforms.append(op)
         if config["Global"].get("infer_mode", None) is None:
-            global_config['infer_mode'] = True
-        self.ops = create_operators(config['Eval']['dataset']['transforms'],
-                                    global_config)
+            global_config["infer_mode"] = True
+        self.ops = create_operators(
+            config["Eval"]["dataset"]["transforms"], global_config
+        )
         self.model.eval()
 
+        self.count = 199
+
     def __call__(self, data):
-        # with open(data["img_path"], 'rb') as f:
-        #     img = f.read()
-        # data["image"] = img
+        self.count += 1
+        show_time_inference = self.count > 200
+        if show_time_inference:
+            time_s = time.time()
+
         batch = transform(data, self.ops)
         batch = to_tensor(batch)
         preds = self.model(batch)
 
         post_result = self.post_process_class(
-            preds, segment_offset_ids=batch[6], ocr_infos=batch[7])
+            preds, segment_offset_ids=batch[6], ocr_infos=batch[7]
+        )
+
+        if show_time_inference:
+            logger.info(f"Time inference SER: {time.time() - time_s}")
+            self.count = 0
 
         return post_result, batch
-    
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     # config, device, logger, vdl_writer = program.preprocess()
     # os.makedirs(config['Global']['save_res_path'], exist_ok=True)
 
@@ -197,45 +229,52 @@ if __name__ == '__main__':
     #         result, _ = ser_engine(data)
     #         result = result[0]
     #         print(result)
-            # print(result)
-            # fout.write(img_path + "\t" + json.dumps(
-            #     {
-            #         "ocr_info": result,
-            #     }, ensure_ascii=False) + "\n")
-            # img_res = draw_ser_results(img_path, result, font_size=18)
-            # cv2.imwrite(save_img_path, img_res)
+    # print(result)
+    # fout.write(img_path + "\t" + json.dumps(
+    #     {
+    #         "ocr_info": result,
+    #     }, ensure_ascii=False) + "\n")
+    # img_res = draw_ser_results(img_path, result, font_size=18)
+    # cv2.imwrite(save_img_path, img_res)
 
-            # logger.info("process: [{}/{}], save result to {}".format(
-            #     idx, len(infer_imgs), save_img_path))
+    # logger.info("process: [{}/{}], save result to {}".format(
+    #     idx, len(infer_imgs), save_img_path))
 
     f = open("/home/yaiba/project/KIE/server/cfg/ser_vi_layoutxlm.json", "r")
     config = json.load(f)
-    global_config = config['Global']
+    global_config = config["Global"]
 
     from paddleocr import PaddleOCR
+
     ocr_engine = PaddleOCR(
         use_angle_cls=False,
         show_log=False,
         rec_model_dir=global_config.get("kie_rec_model_dir", None),
         det_model_dir=global_config.get("kie_det_model_dir", None),
         cls_model_dir=global_config.get("kie_cls_model_dir", None),
-        rec_char_dict_path = config.get("kie_char_dict_path", None),
-        use_gpu=global_config['use_gpu'])
-    
+        rec_char_dict_path=config.get("kie_char_dict_path", None),
+        use_gpu=global_config["use_gpu"],
+    )
+
     transforms = []
-    for op in config['Eval']['dataset']['transforms']:
+    for op in config["Eval"]["dataset"]["transforms"]:
         op_name = list(op)[0]
-        if 'Label' in op_name:
-            op[op_name]['ocr_engine'] = ocr_engine
-        elif op_name == 'KeepKeys':
-            op[op_name]['keep_keys'] = [
-                'input_ids', 'bbox', 'attention_mask', 'token_type_ids',
-                'image', 'labels', 'segment_offset_id', 'ocr_info',
-                'entities'
+        if "Label" in op_name:
+            op[op_name]["ocr_engine"] = ocr_engine
+        elif op_name == "KeepKeys":
+            op[op_name]["keep_keys"] = [
+                "input_ids",
+                "bbox",
+                "attention_mask",
+                "token_type_ids",
+                "image",
+                "labels",
+                "segment_offset_id",
+                "ocr_info",
+                "entities",
             ]
 
         transforms.append(op)
     if config["Global"].get("infer_mode", None) is None:
-        global_config['infer_mode'] = True
-    ops = create_operators(config['Eval']['dataset']['transforms'],
-                                global_config)
+        global_config["infer_mode"] = True
+    ops = create_operators(config["Eval"]["dataset"]["transforms"], global_config)

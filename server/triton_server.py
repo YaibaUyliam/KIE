@@ -50,8 +50,6 @@ class _InferFuncWrapper:
     # @fill_optionals(get_info=np.array([False], dtype=np.int8))
     @batch
     def __call__(self, image: np.ndarray, ocr: np.object_) -> dict:
-        time_s = time.time()
-
         ser_res = None
         re_res = None
         ser_res_other = None
@@ -60,7 +58,6 @@ class _InferFuncWrapper:
             try:
                 data = {}
                 data["image"] = image[0]
-                # logger.info(data["image"].shape)
 
                 ocr = pickle.loads(ocr[0][0])
                 data["ocr_info"] = convert(ocr[0])
@@ -83,7 +80,6 @@ class _InferFuncWrapper:
                         "thus no further inferences are possible."
                     ) from e
 
-        logger.info(time.time() - time_s)
         return {
             "ser_res": np.array([json.dumps(ser_res, default=convert_to_python_float)]),
             "re_res": np.array([json.dumps(re_res)]),

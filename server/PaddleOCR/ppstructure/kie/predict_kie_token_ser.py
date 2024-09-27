@@ -16,11 +16,12 @@ import sys
 
 __dir__ = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(__dir__)
-sys.path.insert(0, os.path.abspath(os.path.join(__dir__, '../..')))
+sys.path.insert(0, os.path.abspath(os.path.join(__dir__, "../..")))
 
-os.environ["FLAGS_allocator_strategy"] = 'auto_growth'
+os.environ["FLAGS_allocator_strategy"] = "auto_growth"
 
 import cv2
+
 # import json
 import numpy as np
 import time
@@ -29,6 +30,7 @@ import tools.infer.utility as utility
 from ppocr.data import create_operators, transform
 from ppocr.postprocess import build_post_process
 from ppocr.utils.logging import get_logger
+
 # from ppocr.utils.visual import draw_ser_results
 # from ppocr.utils.utility import get_image_file_list, check_and_read
 from ppstructure.utility import parse_args
@@ -44,6 +46,83 @@ class SerPredictor(object):
         args.kie_algorithm = arch["algorithm"]
         args.ser_model_dir = arch["Backbone"]["checkpoints"]
         args.ser_dict_path = cfg["PostProcess"]["class_path"]
+        # args.use_onnx = True
+        # args.use_gpu = False
+        self.use_onnx = False
+        # print(args.__dict__)
+
+        pre_process_list = cfg["Eval"]["dataset"]["transforms"]
+
+        self.preprocess_op = create_operators(pre_process_list, {"infer_mode": True})
+        postprocess_params = cfg["PostProcess"]
+        self.postprocess_op = build_post_process(postprocess_params)
+        self.predictor, self.input_tensor, self.output_tensors, self.config = (
+            utility.create_predictor(args, "ser", logger)
+        )
+
+        if self.use_onnx:
+            self.input_names = [input.name for input in self.input_tensor]
+            print(self.input_names)
+
+        self.count = 0
+
+    def __call__(self, data: dict):
+        self.count += 1
+        show_time_inference = self.count > 200
+        if show_time_inference:
+            time_s = time.time()
+
+        batch = transform(data, self.preprocess_op)
+
+        if batch[0] is None:
+            return None, 0
+
+        for idx in range(len(batch)):
+            if isinstance(batch[idx], np.ndarray):
+                batch[idx] = np.expand_dims(batch[idx], axis=0)
+            else:
+                batch[idx] = [batch[idx]]
+
+        if not self.use_onnx:
+            for idx in range(len(self.input_tensor)):
+                self.input_tensor[idx].copy_from_cpu(batch[idx])
+
+            self.predictor.run()
+
+            outputs = []
+            for output_tensor in self.output_tensors:
+                output = output_tensor.copy_to_cpu()
+                outputs.append(output)
+                break
+
+            preds = outputs[0]
+
+        else:
+            input_dict = {
+                self.input_names[idx]: batch[idx]
+                for idx in range(len(self.input_names))
+            }
+            preds = self.predictor.run([], input_dict)[0]
+
+        post_result = self.postprocess_op(
+            preds, segment_offset_ids=batch[6], ocr_infos=batch[7]
+        )
+
+        if show_time_inference:
+            logger.info(f"Time inference SER: {time.time() - time_s}")
+            self.count = 0
+
+        self.predictor.try_shrink_memory()
+
+        return post_result, batch
+
+
+class SerPredictorV2(object):
+    def __init__(self, args, cfg):
+        arch = cfg["Architecture"]
+        args.kie_algorithm = arch["algorithm"]
+        args.ser_model_dir = "/home/yaiba/project/KIE/PaddleOCR/inference/ser_vi_layoutxlm_2308_onnx_1/model.onnx"
+        args.ser_dict_path = cfg["PostProcess"]["class_path"]
         args.use_onnx = True
         # args.use_gpu = False
         self.use_onnx = True
@@ -51,19 +130,21 @@ class SerPredictor(object):
 
         pre_process_list = cfg["Eval"]["dataset"]["transforms"]
 
-        self.preprocess_op = create_operators(pre_process_list,
-                                              {'infer_mode': True})
+        self.preprocess_op = create_operators(pre_process_list, {"infer_mode": True})
         postprocess_params = cfg["PostProcess"]
         self.postprocess_op = build_post_process(postprocess_params)
-        self.predictor, self.input_tensor, self.output_tensors, self.config = \
-            utility.create_predictor(args, 'ser', logger)
+        self.predictor, self.input_tensor, self.output_tensors, self.config = (
+            utility.create_predictor(args, "ser", logger)
+        )
 
         if self.use_onnx:
             self.input_names = [input.name for input in self.input_tensor]
             print(self.input_names)
 
     def __call__(self, data: dict):
+        # time_s = time.time()
         batch = transform(data, self.preprocess_op)
+        # logger.info(f"Time preprocessing: {time.time() - time_s}")
 
         if batch[0] is None:
             return None, 0
@@ -90,13 +171,22 @@ class SerPredictor(object):
             preds = outputs[0]
 
         else:
-            input_dict = {self.input_names[idx] : batch[idx] for idx in range(len(self.input_names))}
+            time_s = time.time()
+            input_dict = {
+                self.input_names[idx]: batch[idx]
+                for idx in range(len(self.input_names))
+            }
             preds = self.predictor.run([], input_dict)[0]
+            logger.info(f"Time inference: {time.time() - time_s}")
 
+        # time_s = time.time()
         post_result = self.postprocess_op(
-            preds, segment_offset_ids=batch[6], ocr_infos=batch[7])
+            preds, segment_offset_ids=batch[6], ocr_infos=batch[7]
+        )
+        # logger.info(f"Time postprocessing: {time.time() - time_s}")
 
         return post_result, batch
+
 
 def main():
     # image_file_list = get_image_file_list(args.image_dir)
@@ -148,6 +238,7 @@ def main():
     img = cv2.imread("/home/yaiba/Downloads/crcl2f-c4edebb8bb02cc-493105.jpg")
     post_result = model(img)
     logger.info(post_result)
+
 
 if __name__ == "__main__":
     main()

@@ -11,7 +11,7 @@ Architecture:
   Backbone:
     name: LayoutXLMForSer
     pretrained: True
-    checkpoints: ckpts/ser_re_vi_layoutxlm_2708_onnx/model.onnx
+    checkpoints: ckpts/ser_re_vi_layoutxlm_0827
     # one of base or vi
     mode: vi
     num_classes: &num_classes 25
@@ -48,11 +48,11 @@ Eval:
           max_seq_len: *max_seq_len
       - Resize:
           size: [224,224]
-      - NormalizeImage:
-          scale: 1
-          mean: [ 123.675, 116.28, 103.53 ]
-          std: [ 58.395, 57.12, 57.375 ]
-          order: 'hwc'
+      # - NormalizeImage:
+      #     scale: 1
+      #     mean: [ 123.675, 116.28, 103.53 ]
+      #     std: [ 58.395, 57.12, 57.375 ]
+      #     order: 'hwc'
       - ToCHWImage:
       - KeepKeys:
           keep_keys: [ 'input_ids', 'bbox', 'attention_mask', 'token_type_ids', 'image', 'labels', 'segment_offset_id', 'ocr_info', 'entities'] # dataloader will return list in this order
