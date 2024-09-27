@@ -1,54 +1,67 @@
 version: "3.8"
 
 services:
-  server:
-    image: yaibawiliam/kie_server:v4.3.5.test
+  kie_server:
+    image: cw-aiharbor-aws.pzvtudj.com/kie/kie_server:v4.4.3
     ports:
-      - "8000:8000"
-      - "8001:8001"
-      - "8002:8002"
+      - "9999:8000"
+      - "9998:8001"
+      - "9997:8002"
     volumes:
       - type: tmpfs
         target: /dev/shm
         tmpfs:
-          size: 1200000000
+          size: 2200000000
     environment:
-      NUMBER_OF_INSTANCES: 1
+      - NUMBER_OF_INSTANCES=2
+      - http_proxy=10.8.16.162:13080
+      - https_proxy=10.8.16.162:13080
+      - NVIDIA_VISIBLE_DEVICES=1
+      - PYTRITON_TRITON_CONFIG_pinned_memory_pool_byte_size=2268435456
+      - PYTRITON_TRITON_CONFIG_cuda_memory_pool_byte_size=0:2268435456
     deploy:
-      replicas: 1
+      replicas: 2
+      placement:
+        constraints:
+          - node.labels.gpu == true
+          # - node.hostname == zy-tw-zf-prod-cw-ai-gpu02
+          # - node.hostname == zy-tw-zf-prod-cw-ai-gpu01
       resources:
+        limits:
+          memory: '32G'
+          cpus: '20'
         reservations:
+          cpus: '2'
+          memory: '8G'
           generic_resources:
             - discrete_resource_spec:
                 kind: 'NVIDIA-GPU'
-                value: 0
-          # devices:
-          #   - driver: nvidia
-          #     device_ids: ['0']
-          #     capabilities: [gpu]
+                value: 2
       restart_policy:
         condition: any
         delay: 5s
         max_attempts: 3
         window: 20s
     networks:
-      - network1
+      - api_cms_network
 
-  client:
-    image: yaibawiliam/kie_client:v2.2.18.test
-    # container_name: kie_client # not support
-    # depends_on:
-    #   - kie_server
+  kie-client:
+    image: cw-aiharbor-aws.pzvtudj.com/kie/kie_client:v2.2.4
     environment:
       IP_DEST: kie_server
-      URL_DB: mongodb://admin:92F767B6302F76A799A75447006AA59A@16.163.245.213:27017
-      PROCESS: 3
-      KAFKA: 43.198.68.123:9092,43.198.68.123:9093,43.198.68.123:9094
-      GROUP_ID: zzz-aish-1
+      http_proxy: 10.8.16.162:13080
+      https_proxy: 10.8.16.162:13080
+      no_proxy: kie_server
+      URL_DB: mongodb://data-rule:kecNFhVx7odwFSyi@10.8.163.27:27017,10.8.163.28:27017,10.8.163.29:27017/data-rule?replicaSet=shard1
     ports:
       - "5003:5003"
+    deploy:
+      replicas: 1
+      placement:
+        max_replicas_per_node: 1
     networks:
-      - network1
+      - api_cms_network
 
 networks:
-  network1:
+  api_cms_network:
+    external: true

@@ -25,7 +25,7 @@ class DataDefine:
     def __init__(self, data: dict, mode="db") -> None:
         # self.file_size: int | None = data.get("file_size")
 
-        self.url: str = data.get("url")
+        self.url: str = data.get("origin_url")
         # server save img change domain
         if "postatic.mbrkrxw0.com" in self.url:
             self.url = self.url.replace("https://postatic.mbrkrxw0.com", "https://d3kfcxg6897gl8.cloudfront.net")  # fmt: skip

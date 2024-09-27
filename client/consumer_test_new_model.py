@@ -53,8 +53,7 @@ class BillInfo:
         # with open("cfg/bank_get_info.yaml") as f:
         #     self.bank_run = yaml.load(f, Loader=yaml.FullLoader)
 
-        # self.client_kie = KieClient(connection_db)
-        self.client_kie = KieClient()
+        self.client_kie = KieClient(connection_db)
 
     def run(self):
         while True:
@@ -65,7 +64,6 @@ class BillInfo:
                 for _, items in data.items():
                     for item in items:
                         item = item.value
-
                         if item["bank_code"] == "C000":
                             continue
 
@@ -111,7 +109,3 @@ if __name__ == "__main__":
     signal.signal(signal.SIGTERM, signal_handler)
 
     bi.start()
-
-
-if __name__ == "__main__":
-    bi = BillInfo()

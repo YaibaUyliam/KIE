@@ -7,6 +7,7 @@ import pickle
 from pytriton.client import ModelClient
 from pymongo import MongoClient
 from dotenv import load_dotenv
+from loguru import logger
 
 from preprocess import rm_hidden_letter, rm_stamp
 from postprocess import SERPostProcessing, REPostProcessing, SEROtherPostProcessing
@@ -17,14 +18,16 @@ load_dotenv()
 
 
 def infer(img: np.ndarray, ocr_res: list, des="kie_server"):
-    with ModelClient(des, "KIE", init_timeout_s=80) as client:
-        ocr_res = pickle.dumps(ocr_res, protocol=pickle.HIGHEST_PROTOCOL)
-        ocr_res = np.array([ocr_res])
+    try:
+        with ModelClient(des, "KIE", init_timeout_s=5, inference_timeout_s=2) as client:
+            ocr_res = pickle.dumps(ocr_res, protocol=pickle.HIGHEST_PROTOCOL)
+            ocr_res = np.array([ocr_res])
 
-        res_ocr = client.infer_sample(img, ocr_res)
+            res_ocr = client.infer_sample(img, ocr_res)
 
-    return res_ocr
-
+        return res_ocr
+    except:
+        logger.info("time out")
 
 class KieClient:
     def __init__(self, connection_string: str = None) -> None:
@@ -36,7 +39,7 @@ class KieClient:
         if self.connection_string:
             client = MongoClient(connection_string)
             mydb = client["kie"]
-            self.mycol = mydb["money_add"]
+            self.mycol = mydb["test_new_model"]
 
     def __call__(self, data: DataDefine) -> None:
         # Preprocessing image
@@ -49,18 +52,18 @@ class KieClient:
 
         res_server = infer(img, data.ocr_res, os.environ.get("IP_DEST"))
         ser_res = json.loads(res_server["ser_res"])
-        re_res = json.loads(res_server["re_res"])
-        ser_res_other = json.loads(res_server["ser_res_other"])
+        # re_res = json.loads(res_server["re_res"])
+        # ser_res_other = json.loads(res_server["ser_res_other"])
 
         data.text_info, data.bb_info = self.ser_postprocess(
-            ser_res[0], data.bank_code, img, data.text_bill
+            ser_res, data.bank_code, img, data.text_bill
         )
-        if re_res:
-            data.key_value = self.re_postprocess(re_res, img)
-            data.ser_other = self.ser_other_postprocess(ser_res_other, img)
+        # if re_res:
+        #     data.key_value = self.re_postprocess(re_res, img)
+        #     data.ser_other = self.ser_other_postprocess(ser_res_other, img)
 
-        if self.connection_string:
-            self.mycol.insert_one(document=data.info_save_db)
+        # if self.connection_string:
+        #     self.mycol.insert_one(document=data.info_save_db)
 
         return data.info_cls_ocr, data.info_save_db, data.key_value, data.ser_other
 

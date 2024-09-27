@@ -32,7 +32,7 @@ class SEROtherPostProcessing:
         
         # s2
         ser_other = {k.lower(): None for k in labels}
-        for key_value in ser_res_other[0]:
+        for key_value in ser_res_other:
             txt = key_value['transcription']
             if key_value['pred'] in labels:
                 bbox = key_value['bbox']

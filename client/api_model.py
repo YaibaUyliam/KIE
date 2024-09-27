@@ -118,7 +118,8 @@ def ser_re_visual():
                     order_list = data
 
                 else:
-                    query = {"url": url}
+                    # query = {"url": url}
+                    query = {"$or": [{"url": url}, {"origin_url": url}] }
                     order_list = list(collection.find(query, projection))[0]
                     logger.info("Time query DB: %s", time.time() - time_s)
 
@@ -133,50 +134,47 @@ def ser_re_visual():
                 "img_ser_other": None,
             }
 
+        img_ser_res = None
+        ser_res_post = None
+        img_re_res = None
+        ser_res_other = None
+
         time_s = time.time()
         model_res = infer(img, ocr, os.environ.get("IP_DEST"))
         logger.info("Time model infer: %s", time.time() - time_s)
 
+        # print(json.loads(model_res["ser_res"]))
         ser_res = json.loads(model_res["ser_res"])
         re_res = json.loads(model_res["re_res"])
         ser_res_other = json.loads(model_res["ser_res_other"])
 
-        ser_res_other = ser_other_postprocess(ser_res_other, img)
-
-        img_ser_res = None
-        ser_res_post = None
-        img_re_res = None
-        if ser_res is not None:
-            ser_res_post, _ = ser_postprocess(ser_res[0], None, img, text_only)
+        if ser_res:
+            ser_res_post, _ = ser_postprocess(ser_res, None, img, text_only)
             img_draw_ser = draw_ser_results(
-                img, ser_res[0], font_path="fonts/simfang.ttf"
+                img, ser_res, font_path="fonts/simfang.ttf"
             )
             img_ser_res = base_head + cv2_to_base64(img_draw_ser)
 
-        if re_res is not None:
-            img_draw_re = draw_re_results(img, re_res[0], font_path="fonts/simfang.ttf")
+        if re_res:
+            img_draw_re = draw_re_results(img, re_res, font_path="fonts/simfang.ttf")
             img_re_res = base_head + cv2_to_base64(img_draw_re)
 
-        return jsonify(
-            {
-                "img_ser": img_ser_res,
-                "img_ser_post": ser_res_post,
-                "img_re": img_re_res,
-                "img_ser_other": ser_res_other,
-            }
-        )
+        if ser_res_other:
+            ser_res_other = ser_other_postprocess(ser_res_other, img)
 
     except Exception as e:
         logger.error(e)
         logger.error(type(e).__name__)
         logger.error(traceback.format_exc())
 
-        return {
-            "img_ser": None,
-            "img_ser_post": None,
-            "img_re": None,
-            "img_ser_other": None,
+    return jsonify(
+        {
+            "img_ser": img_ser_res,
+            "img_ser_post": ser_res_post,
+            "img_re": img_re_res,
+            "img_ser_other": ser_res_other,
         }
+    )
 
 
 if __name__ == "__main__":

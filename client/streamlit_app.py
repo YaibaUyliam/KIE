@@ -34,21 +34,14 @@ url_input = st.text_input("Nhập URL của bạn vào đây")
 bank_code = st.text_input("Nhập bank code của bạn vào đây")
 uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "png", "jpeg"])
 
-
 if uploaded_file or url_input or bank_code:
     headers = {}
     files = {}
 
     if uploaded_file:
+        headers = {}
         files = [
-            (
-                "file",
-                (
-                    "cq02ts-b77d2310b0ad06-151349.jpg",
-                    uploaded_file,
-                    "image/jpeg",
-                ),
-            )
+            ("file", (uploaded_file.name, uploaded_file.read(), uploaded_file.type))
         ]
         order_list = [{}]
 
@@ -68,12 +61,14 @@ if uploaded_file or url_input or bank_code:
         for order in order_list:
             col1, col2, col3 = st.columns(3)
 
-            url = order["url"]
-            payload = json.dumps(order)
+            if len(order) > 0:
+                payload = json.dumps(order)
+            else:
+                payload = {}
 
             response = requests.request(
                 "POST",
-                "http://172.19.30.25:5003/ser_re_visual",
+                os.environ.get("IP_API_CLIENT"),
                 headers=headers,
                 data=payload,
                 files=files,
@@ -85,7 +80,7 @@ if uploaded_file or url_input or bank_code:
                 result_1_b64 = data["img_ser"]
                 result_2_b64 = data["img_re"]
                 result_3 = data["img_ser_post"]
-                result_3["url"] = url
+                result_3["url"] = order.get("url")
                 result_3["order_no"] = order.get("order_no")
                 result_3["text_only"] = order.get("text_by_line")
 
