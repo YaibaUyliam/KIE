@@ -25,6 +25,8 @@ import cv2
 # import json
 import numpy as np
 import time
+import numbers
+from collections import defaultdict
 
 import tools.infer.utility as utility
 from ppocr.data import create_operators, transform
@@ -34,10 +36,24 @@ from ppocr.utils.logging import get_logger
 # from ppocr.utils.visual import draw_ser_results
 # from ppocr.utils.utility import get_image_file_list, check_and_read
 from ppstructure.utility import parse_args
-
 # from paddleocr import PaddleOCR
 
+
 logger = get_logger()
+
+
+def to_onnx_format(batch):
+    data_dict = defaultdict(list)
+    to_tensor_idxs = []
+
+    for data in batch:
+        for idx, v in enumerate(data):
+            if isinstance(v, (np.ndarray, numbers.Number)):
+                if idx not in to_tensor_idxs:
+                    to_tensor_idxs.append(idx)
+            data_dict[idx].append(v)
+
+    return list(data_dict.values())
 
 
 class SerPredictor(object):
@@ -46,9 +62,8 @@ class SerPredictor(object):
         args.kie_algorithm = arch["algorithm"]
         args.ser_model_dir = arch["Backbone"]["checkpoints"]
         args.ser_dict_path = cfg["PostProcess"]["class_path"]
-        # args.use_onnx = True
-        # args.use_gpu = False
-        self.use_onnx = False
+        args.use_onnx = True
+        self.use_onnx = True
         # print(args.__dict__)
 
         pre_process_list = cfg["Eval"]["dataset"]["transforms"]
@@ -112,7 +127,7 @@ class SerPredictor(object):
             logger.info(f"Time inference SER: {time.time() - time_s}")
             self.count = 0
 
-        self.predictor.try_shrink_memory()
+        # self.predictor.try_shrink_memory()
 
         return post_result, batch
 

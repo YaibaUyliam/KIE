@@ -64,21 +64,23 @@ class ReArgsParser(ArgsParser):
         return args
 
 
+entities_labels = {
+    "HEADER": 0,
+    "QUESTION": 1,
+    "ANSWER": 2,
+    "TIME": 3,
+    "TIME_TRANS": 4,
+    "SERI": 5,
+    "MONEY": 6,
+    "BUTTON": 7,
+    "STK": 8,
+    "CONFIRM": 9,
+    "NOTE1": 10,
+    "NOTE2": 11,
+}
+
+
 def make_input(ser_inputs, ser_results):
-    entities_labels = {
-        "HEADER": 0,
-        "QUESTION": 1,
-        "ANSWER": 2,
-        "TIME": 3,
-        "TIME_TRANS": 4,
-        "SERI": 5,
-        "MONEY": 6,
-        "BUTTON": 7,
-        "STK": 8,
-        "CONFIRM": 9,
-        "NOTE1": 10,
-        "NOTE2": 11,
-    }
     batch_size, max_seq_len = ser_inputs[0].shape[:2]
     entities = ser_inputs[8][0]
     ser_results = ser_results[0]
@@ -134,6 +136,88 @@ def make_input(ser_inputs, ser_results):
     entity_idx_dict_batch = []
     for b in range(batch_size):
         entity_idx_dict_batch.append(entity_idx_dict)
+
+    return ser_inputs, entity_idx_dict_batch
+
+
+def make_input_batch(ser_inputs, ser_results):
+    batch_size, max_seq_len = ser_inputs[0].shape[:2]
+    entities = []
+    relations = []
+    entity_idx_dict_batch = []
+
+    for idx in range(batch_size):
+        entitie = ser_inputs[8][idx]
+        ser_result = ser_results[idx]
+        assert len(entitie) == len(
+            ser_result
+        ), f"len of entitie: {len(entitie)}, {len(ser_inputs[7][idx])}, len of ser res: {len(ser_result)} \n {ser_inputs} \n {ser_results[idx]}"
+
+        # entitie
+        start = []
+        end = []
+        label = []
+        entity_idx_dict = {}
+        for i, (res, entity) in enumerate(zip(ser_result, entitie)):
+            if res["pred"] == "O":
+                continue
+            entity_idx_dict[len(start)] = i
+            start.append(entity["start"])
+            end.append(entity["end"])
+            label.append(entities_labels[res["pred"]])
+
+        if len(label) == 0:
+            print("++++++++")
+            return None, None
+        if label.count(1) == 0 or label.count(2) == 0:
+            print("-------")
+            return None, None
+
+        entitie = np.full([max_seq_len + 1, 3], fill_value=-1, dtype=np.int64)
+        entitie[0, 0] = len(start)
+        entitie[1 : len(start) + 1, 0] = start
+        entitie[0, 1] = len(end)
+        entitie[1 : len(end) + 1, 1] = end
+        entitie[0, 2] = len(label)
+        entitie[1 : len(label) + 1, 2] = label
+
+        # relation
+        head = []
+        tail = []
+        for i in range(len(label)):
+            for j in range(len(label)):
+                if label[i] == 1 and label[j] == 2:
+                    head.append(i)
+                    tail.append(j)
+
+        relation = np.full([max_seq_len + 1, 2], fill_value=-1, dtype=np.int64)
+        relation[0, 0] = len(head)
+        relation[1 : len(head) + 1, 0] = head
+        relation[0, 1] = len(tail)
+        relation[1 : len(tail) + 1, 1] = tail
+
+        entities.append(entitie)
+        relations.append(relation)
+        entity_idx_dict_batch.append(entity_idx_dict)
+
+    entities = np.array(entities)
+    relations = np.array(relations)
+
+    # entities = np.expand_dims(entities, axis=0)
+    # entities = np.repeat(entities, batch_size, axis=0)
+    # relations = np.expand_dims(relations, axis=0)
+    # relations = np.repeat(relations, batch_size, axis=0)
+
+    # remove ocr_info segment_offset_id and label in ser input
+    if isinstance(ser_inputs[0], paddle.Tensor):
+        entities = paddle.to_tensor(entities)
+        relations = paddle.to_tensor(relations)
+
+    for idx in range(batch_size):
+        ser_inputs = ser_inputs[:5] + [entities, relations]
+    # entity_idx_dict_batch = []
+    # for _ in range(batch_size):
+    #     entity_idx_dict_batch.append(entity_idx_dict)
     return ser_inputs, entity_idx_dict_batch
 
 
@@ -161,7 +245,7 @@ class SerRePredictor(object):
 
         self.count = 199
 
-    def __call__(self, data):
+    def __call__(self, data: list[dict]):
         ser_results, ser_inputs = self.ser_engine(data)
 
         self.count += 1
@@ -169,7 +253,12 @@ class SerRePredictor(object):
         if show_time_inference:
             time_s = time.time()
 
-        re_input, entity_idx_dict_batch = make_input(ser_inputs, ser_results)
+        # Error when not element has value 1 or 2
+        re_input, entity_idx_dict_batch = make_input_batch(ser_inputs, ser_results)
+        if re_input is None:
+            batch = ser_inputs[0].shape[0]
+            return [None] * batch, [None] * batch
+
         if self.model.backbone.use_visual_backbone is False:
             re_input.pop(4)
         preds = self.model(re_input)

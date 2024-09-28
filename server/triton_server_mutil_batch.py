@@ -1,5 +1,5 @@
 import numpy as np
-import argparse
+import copy
 from typing import Any, List
 import traceback
 import json
@@ -15,23 +15,26 @@ from pytriton.model_config import ModelConfig, Tensor
 from pytriton.triton import Triton, TritonConfig
 from pytriton.decorators import batch  # , fill_optionals
 from pytriton.exceptions import PyTritonUnrecoverableError
+from pytriton.model_config import DynamicBatcher
 
-from ocr import convert
-from PaddleOCR.ppstructure.kie.predict_kie_token_ser import SerPredictor
-from PaddleOCR.ppstructure.kie.predict_kie_token_ser_re import SerRePredictor
-from PaddleOCR.ppstructure.utility import parse_args
-
+from ocr import run_ocr, convert
+from PaddleOCR.tools.infer_kie_token_ser import SerPredictorV2
+from PaddleOCR.tools.infer_kie_token_ser_re import SerRePredictor
+import paddle
 
 load_dotenv()
-args = parse_args()
+
+cfg_ser = yaml.safe_load(open("cfg/ser/ser_vi_layoutxlm.yaml"))
+cfg_cer_for_re = yaml.safe_load(open("cfg/re/ser_vi_layoutxlm_xfund_zh.yml"))
+cfg_re = yaml.safe_load(open("cfg/re/re_vi_layoutxlm_xfund_zh.yml"))
 
 
 def init_ser_model(cfg):
-    return SerPredictor(args, cfg)
+    return SerPredictorV2(cfg)
 
 
-def init_re_model(cfg_re, cfg_ser):
-    return SerRePredictor(args, cfg_ser, cfg_re)
+def init_re_model(cfg, cfg_ser):
+    return SerRePredictor(cfg, cfg_ser)
 
 
 def convert_to_python_float(obj):
@@ -50,7 +53,7 @@ class _InferFuncWrapper:
     # @fill_optionals(get_info=np.array([False], dtype=np.int8))
     @batch
     def __call__(self, image: np.ndarray, ocr: np.object_) -> dict:
-        batch_size = 1
+        batch_size = image.shape[0]
 
         ser_res = [None] * batch_size
         re_res = [None] * batch_size
@@ -58,19 +61,25 @@ class _InferFuncWrapper:
 
         if len(ocr) != 0:
             try:
-                data = {}
-                data["image"] = image[0]
+                batch = []
 
-                ocr = pickle.loads(ocr[0][0])
-                data["ocr_info"] = convert(ocr[0])
+                for idx in range(image.shape[0]):
+                    data = {}
+                    data["image"] = image[idx]
 
-                ser_res, _ = self._ser_model(data.copy())
-                re_res, ser_res_other = self._re_model(data.copy())
+                    ocr_format = pickle.loads(ocr[idx][0])
+                    data["ocr_info"] = convert(ocr_format[0])
+
+                    batch.append(data)
+
+                print("batch size: ", len(batch))
+
+                ser_res, _ = self._ser_model(copy.deepcopy(batch))
+                # re_res, ser_res_other = self._re_model(copy.deepcopy(batch))
 
             except Exception as e:
-                logger.error(e)
-                logger.error(type(e).__name__)
                 logger.error(traceback.format_exc())
+                # logger.exception(e)
 
                 if type(e).__name__ == "OSError":
                     output = subprocess.check_output(["nvidia-smi"])
@@ -82,6 +91,8 @@ class _InferFuncWrapper:
                         "thus no further inferences are possible."
                     ) from e
 
+        # time.sleep(0.07)
+        # paddle.device.cuda.empty_cache()
         return {
             "ser_res": np.array([json.dumps(res, default=convert_to_python_float) for res in ser_res]), # fmt: skip
             "re_res": np.array([json.dumps(res, default=convert_to_python_float) for res in re_res]), # fmt: skip
@@ -93,9 +104,6 @@ def _infer_function_factory(devices: List[str]):
     infer_funcs = []
 
     for device in devices:
-        cfg_ser = yaml.safe_load(open("cfg/ser/ser_vi_layoutxlm.yaml"))
-        cfg_cer_for_re = yaml.safe_load(open("cfg/re/ser_vi_layoutxlm_xfund_zh.yml"))
-        cfg_re = yaml.safe_load(open("cfg/re/re_vi_layoutxlm_xfund_zh.yml"))
         # ocr_model = OcrEngine(cfg_ser["Global"])
         ser_model = init_ser_model(cfg_ser)
         re_model = init_re_model(cfg_re, cfg_cer_for_re)
@@ -107,6 +115,7 @@ def _infer_function_factory(devices: List[str]):
 
 def main():
     devices = ["cuda:0"] * int(os.environ["NUMBER_OF_INSTANCES"])
+    # devices = ["cuda:0", "cuda:0"]
 
     # with Triton(config=TritonConfig(log_verbose=3)) as triton:
     with Triton() as triton:
@@ -123,7 +132,8 @@ def main():
                 Tensor(name="ser_res_other", dtype=bytes, shape=(-1,)),
             ],
             config=ModelConfig(
-                max_batch_size=1,
+                max_batch_size=4,
+                batcher=DynamicBatcher(max_queue_delay_microseconds=500000, preferred_batch_size=[2, 4])
             ),
             strict=False,
         )
@@ -132,3 +142,39 @@ def main():
 
 if __name__ == "__main__":
     main()
+    # ser_model = init_ser_model(cfg_ser)
+    # re_model = init_re_model(cfg_re, cfg_cer_for_re)
+
+    # import json
+    # import requests
+    # import cv2
+
+    # batch_test = []
+    # with open("/home/yaiba/project/kie/client/test.json") as f:
+    #     data_test = json.load(f)
+
+    # for idx in range(2):
+    #     data = {}
+
+    #     url = data_test[idx]["origin_url"]
+    #     print(url)
+    #     response = requests.get(url, stream=True, verify=True, timeout=5)
+
+    #     response.raw.decode_content = True
+    #     bytes_img = response.content
+
+    #     img_nd = cv2.imdecode(np.frombuffer(bytes_img, dtype="uint8"), 1)
+
+    #     data["image"] = img_nd
+
+    #     ocr_format = data_test[idx][
+    #         "ocr_origin_strange_font"
+    #     ]  # pickle.loads(ocr[0][idx])
+    #     data["ocr_info"] = convert(ocr_format[0])
+
+    #     batch_test.append(data)
+
+    # ser_res, _ = re_model(batch_test.copy())
+    # for v in ser_res:
+    #     print(ser_res)
+    #     print("------------")

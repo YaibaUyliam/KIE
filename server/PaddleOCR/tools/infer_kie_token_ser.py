@@ -26,10 +26,11 @@ sys.path.append(__dir__)
 sys.path.insert(0, os.path.abspath(os.path.join(__dir__, "..")))
 
 os.environ["FLAGS_allocator_strategy"] = "auto_growth"
-import cv2
 import json
 import paddle
 import time
+import numbers
+from collections import defaultdict
 
 from ppocr.data import create_operators, transform
 from ppocr.modeling.architectures import build_model
@@ -44,20 +45,36 @@ from ppocr.utils.logging import get_logger
 logger = get_logger()
 
 
-def to_tensor(data):
-    import numbers
-    from collections import defaultdict
+# def to_tensor(data):
+#     import numbers
+#     from collections import defaultdict
 
+#     data_dict = defaultdict(list)
+#     to_tensor_idxs = []
+
+#     for idx, v in enumerate(data):
+#         if isinstance(v, (np.ndarray, paddle.Tensor, numbers.Number)):
+#             if idx not in to_tensor_idxs:
+#                 to_tensor_idxs.append(idx)
+#         data_dict[idx].append(v)
+#     for idx in to_tensor_idxs:
+#         data_dict[idx] = paddle.to_tensor(data_dict[idx])
+#     return list(data_dict.values())
+
+
+def to_tensor(batch):
     data_dict = defaultdict(list)
     to_tensor_idxs = []
 
-    for idx, v in enumerate(data):
-        if isinstance(v, (np.ndarray, paddle.Tensor, numbers.Number)):
-            if idx not in to_tensor_idxs:
-                to_tensor_idxs.append(idx)
-        data_dict[idx].append(v)
+    for data in batch:
+        for idx, v in enumerate(data):
+            if isinstance(v, (np.ndarray, paddle.Tensor, numbers.Number)):
+                if idx not in to_tensor_idxs:
+                    to_tensor_idxs.append(idx)
+            data_dict[idx].append(v)
     for idx in to_tensor_idxs:
         data_dict[idx] = paddle.to_tensor(data_dict[idx])
+
     return list(data_dict.values())
 
 
@@ -173,14 +190,37 @@ class SerPredictorV2(object):
 
         self.count = 199
 
-    def __call__(self, data):
+    # def __call__(self, data):
+    #     self.count += 1
+    #     show_time_inference = self.count > 200
+    #     if show_time_inference:
+    #         time_s = time.time()
+
+    #     batch = transform(data, self.ops)
+    #     batch = to_tensor(batch)
+    #     preds = self.model(batch)
+
+    #     post_result = self.post_process_class(
+    #         preds, segment_offset_ids=batch[6], ocr_infos=batch[7]
+    #     )
+
+    #     if show_time_inference:
+    #         logger.info(f"Time inference SER: {time.time() - time_s}")
+    #         self.count = 0
+
+    #     return post_result, batch
+
+    def __call__(self, data: list[dict]):
         self.count += 1
         show_time_inference = self.count > 200
         if show_time_inference:
             time_s = time.time()
 
-        batch = transform(data, self.ops)
+        batch = []
+        for v in data:
+            batch.append(transform(v, self.ops))
         batch = to_tensor(batch)
+
         preds = self.model(batch)
 
         post_result = self.post_process_class(

@@ -83,9 +83,9 @@ class _InferFuncWrapper:
                     ) from e
 
         return {
-            "ser_res": np.array([json.dumps(ser_res, default=convert_to_python_float)]),
-            "re_res": np.array([json.dumps(re_res)]),
-            "ser_res_other": np.array([json.dumps(ser_res_other)]),
+            "ser_res": np.array([json.dumps(res, default=convert_to_python_float) for res in ser_res]),
+            "re_res": np.array([json.dumps(res) for res in re_res]),
+            "ser_res_other": np.array([json.dumps(res) for res in ser_res_other]),
         }
 
 

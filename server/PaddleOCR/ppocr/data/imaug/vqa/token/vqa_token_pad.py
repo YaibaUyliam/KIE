@@ -101,4 +101,7 @@ class VQATokenPad(object):
                     else:
                         continue
                 data[key] = np.array(data[key], dtype='int64')
+        length_entities = min(len(data['entities']), self.max_seq_len)
+        data['entities'] = data['entities'][:length_entities]
+
         return data
