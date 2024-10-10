@@ -245,7 +245,7 @@ class SerRePredictor(object):
 
         self.count = 199
 
-    def __call__(self, data: list[dict]):
+    def __call__(self, data):
         ser_results, ser_inputs = self.ser_engine(data)
 
         self.count += 1
@@ -253,12 +253,7 @@ class SerRePredictor(object):
         if show_time_inference:
             time_s = time.time()
 
-        # Error when not element has value 1 or 2
-        re_input, entity_idx_dict_batch = make_input_batch(ser_inputs, ser_results)
-        if re_input is None:
-            batch = ser_inputs[0].shape[0]
-            return [None] * batch, [None] * batch
-
+        re_input, entity_idx_dict_batch = make_input(ser_inputs, ser_results)
         if self.model.backbone.use_visual_backbone is False:
             re_input.pop(4)
         preds = self.model(re_input)
@@ -271,6 +266,33 @@ class SerRePredictor(object):
             self.count = 0
 
         return re_post_result, ser_results
+
+    # def __call__(self, data: list[dict]):
+    #     ser_results, ser_inputs = self.ser_engine(data)
+
+    #     self.count += 1
+    #     show_time_inference = self.count > 200
+    #     if show_time_inference:
+    #         time_s = time.time()
+
+    #     # Error when not element has value 1 or 2
+    #     re_input, entity_idx_dict_batch = make_input_batch(ser_inputs, ser_results)
+    #     if re_input is None:
+    #         batch = ser_inputs[0].shape[0]
+    #         return [None] * batch, [None] * batch
+
+    #     if self.model.backbone.use_visual_backbone is False:
+    #         re_input.pop(4)
+    #     preds = self.model(re_input)
+    #     re_post_result = self.post_process_class(
+    #         preds, ser_results=ser_results, entity_idx_dict_batch=entity_idx_dict_batch
+    #     )
+
+    #     if show_time_inference:
+    #         logger.info(f"Time inference RE: {time.time() - time_s}")
+    #         self.count = 0
+
+    #     return re_post_result, ser_results
 
 
 def preprocess():

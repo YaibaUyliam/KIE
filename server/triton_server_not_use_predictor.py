@@ -52,9 +52,9 @@ class _InferFuncWrapper:
     # @fill_optionals(get_info=np.array([False], dtype=np.int8))
     @batch
     def __call__(self, image: np.ndarray, ocr: np.object_) -> dict:
-        ser_res = None
-        re_res = None
-        ser_res_other = None
+        ser_res = [None]
+        re_res = [None]
+        ser_res_other = [None]
 
         if len(ocr) != 0:
             try:
@@ -83,9 +83,9 @@ class _InferFuncWrapper:
                     ) from e
 
         return {
-            "ser_res": np.array([json.dumps(res, default=convert_to_python_float) for res in ser_res]),
-            "re_res": np.array([json.dumps(res) for res in re_res]),
-            "ser_res_other": np.array([json.dumps(res) for res in ser_res_other]),
+            "ser_res": np.array([json.dumps(res, default=convert_to_python_float) for res in ser_res]), # fmt: skip
+            "re_res": np.array([json.dumps(res, default=convert_to_python_float) for res in re_res]), # fmt: skip
+            "ser_res_other": np.array([json.dumps(res, default=convert_to_python_float) for res in ser_res_other]), # fmt: skip
         }
 
 
@@ -103,29 +103,7 @@ def _infer_function_factory(devices: List[str]):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--max-batch-size",
-        type=int,
-        default=1,
-        help="Batch size of request.",
-        required=False,
-    )
-    parser.add_argument(
-        "--number-of-instances",
-        type=int,
-        default=2,
-        help="Batch size of request.",
-        required=False,
-    )
-    parser.add_argument(
-        "--verbose",
-        action="store_true",
-        default=False,
-    )
-
     devices = ["cuda:0"] * int(os.environ["NUMBER_OF_INSTANCES"])
-    # devices = ["cuda:0", "cuda:0"]
 
     # with Triton(config=TritonConfig(log_verbose=3)) as triton:
     with Triton() as triton:
