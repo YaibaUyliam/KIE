@@ -51,11 +51,11 @@ def get_phone_time(text: str):
 class SERPostProcessing:
     def __init__(self) -> None:
         self.key_text_type = [
-            "beneficiary_account_name_value",
-            "payer_account_name_value",
+            "beneficiary_account_name",
+            "payer_account_name",
         ]
 
-        with open("postprocess/cfg/check_bank_info.yaml") as f:
+        with open("ocr/get_info_bill/postprocess/cfg/check_bank_info.yaml") as f:
             self.check_info = yaml.load(f, Loader=yaml.FullLoader)
             f.close()
 
@@ -83,13 +83,13 @@ class SERPostProcessing:
             if info.get(key) is not None:
                 info[key] = check_full_text(info[key])
 
-        if info.get("serial_number_value") is not None:
-            for char in info["serial_number_value"]:
+        if info.get("serial_number") is not None:
+            for char in info["serial_number"]:
                 if "\u4e00" <= char <= "\u9fff":
-                    info["serial_number_value"] = None
+                    info["serial_number"] = None
 
-        if info.get("transfer_time_value") is not None:
-            info["transfer_time_value"] = format_time(info["transfer_time_value"])
+        if info.get("transfer_time") is not None:
+            info["transfer_time"] = format_time(info["transfer_time"])
         # if info.get("phone_time") is not None:
         #     info["phone_time"] = format_phone_time(info["phone_time"])
 
@@ -135,7 +135,7 @@ class SERPostProcessing:
                 continue
 
             texts[field] = res["transcription"]
-            if field == "transfer_money":
+            if field in ["transfer_money", "transfer_time"]:
                 range_check = 2
             else:
                 range_check = 3
@@ -162,6 +162,7 @@ class SERPostProcessing:
                 boxes[bb] = fit_bbox_2(img, boxes[bb])
 
         return self.check_text(texts, bank_code), boxes
+
 
     # def __call__(self, model_res: list[dict], info: DataDefine) -> None:
     #     number_seri = 1

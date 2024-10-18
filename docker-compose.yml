@@ -13,12 +13,12 @@ services:
         tmpfs:
           size: 2200000000
     environment:
-      - NUMBER_OF_INSTANCES=2
-      - http_proxy=10.8.16.162:13080
-      - https_proxy=10.8.16.162:13080
-      - NVIDIA_VISIBLE_DEVICES=1
-      - PYTRITON_TRITON_CONFIG_pinned_memory_pool_byte_size=2268435456
-      - PYTRITON_TRITON_CONFIG_cuda_memory_pool_byte_size=0:2268435456
+      - NUMBER_OF_INSTANCES=1
+      # - http_proxy=10.8.16.162:13080
+      # - https_proxy=10.8.16.162:13080
+      # - NVIDIA_VISIBLE_DEVICES=1
+      # - PYTRITON_TRITON_CONFIG_pinned_memory_pool_byte_size=2268435456
+      # - PYTRITON_TRITON_CONFIG_cuda_memory_pool_byte_size=0:2268435456
     deploy:
       replicas: 2
       placement:
